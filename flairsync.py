@@ -9,7 +9,6 @@
 import sys
 import requests
 import requests.auth
-import pickle
 import ConfigParser
 import re
 import praw
@@ -17,7 +16,6 @@ from datetime import datetime
 
 # globals
 debug_level = ''
-location = 'local'
 cfg_file = None
 r = None
 
@@ -88,7 +86,6 @@ def reddit_retrieve_flairs(sub_name, valid):
     flairs = {}
 
     # get flairs
-    output = open(sub_name + '_flairs.pkl', 'wb')
     sub = r.get_subreddit(sub_name)
     flair_list = sub.get_flair_list(limit=None)
 
@@ -118,38 +115,6 @@ def reddit_retrieve_flairs(sub_name, valid):
     if debug_level == 'NOTICE' or debug_level == 'DEBUG':
         sys.stdout.write('\n')
         sys.stdout.flush()
-
-    pickle.dump(flairs, output)
-    output.close()
-
-    return flairs
-
-
-# retrieve flairs from local storage (assumes valid as they were checked when pulled from reddit)
-def local_retrieve_flairs(sub_name):
-    global debug_level
-
-    # get flairs
-    output = open(sub_name + '_flairs.pkl', 'rb')
-    flairs = pickle.load(output)
-    index = 0
-
-    for user, flair in flairs.iteritems():
-        index += 1
-        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-            sys.stdout.write('[%s] [NOTICE] Processing %i flair(s) from /r/%s...\r' %
-                              (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
-            sys.stdout.flush()
-
-        if debug_level == 'DEBUG':
-            print('[{0}] [DEBUG] Reading from {1} User: {2} has flair class: {3}' # and flair text: \'{4}\''
-                   .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name + '_flairs.pkl', user, flair['flair_css_class'])) #, flair['flair_text']))
-
-    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        sys.stdout.write('\n')
-        sys.stdout.flush()
-
-    output.close()
 
     return flairs
 
@@ -321,28 +286,22 @@ def build_csv_response(flairs):
 
 # perform the flair updates via a bulk set
 def bulk_set_user_flair(sub_name, flair_mapping):
-    global location
+    # execute upload
+    while True:
+        try:
+            r.get_subreddit(sub_name).set_flair_csv(flair_mapping)
+            break
+        except Exception as e:
+            sys.stderr.write('[{0}] [ERROR]: Error bulk setting flair: {0}'
+                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.exit()
 
-    if location == 'reddit':
-        # execute upload
-        while True:
-            try:
-                r.get_subreddit(sub_name).set_flair_csv(flair_mapping)
-                break
-            except Exception as e:
-                sys.stderr.write('[{0}] [ERROR]: Error bulk setting flair: {0}'
-                                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-                sys.exit()
-
-        print('[{0}] Bulk setting {1} flair(s) to /r/{2} successful!'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flair_mapping), sub_name))
-    else:
-        print('Your location setting is local, bulk upload disabled!!!')
+    print('[{0}] Bulk setting {1} flair(s) to /r/{2} successful!'
+            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flair_mapping), sub_name))
 
 
 def main():
     global debug_level
-    global location
     global cfg_file
     global r
 
@@ -359,7 +318,6 @@ def main():
             sys.stderr.write('[{0}] [ERROR]: {1}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
-    location = cfg_file.get('source', 'location')
     debug_level = cfg_file.get('debug', 'level')
     source_sub = cfg_file.get('source', 'source_sub')
     dest_sub = cfg_file.get('source', 'dest_sub')
@@ -369,19 +327,15 @@ def main():
            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
 
     if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        print('[{0}] [NOTICE] Loading flairs from source: {1}...'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), location))
+        print('[{0}] [NOTICE] Loading flairs...'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
-    if location == 'reddit':
-        # login
-        reddit_login()
+    # login
+    reddit_login()
 
-        # get flairs from source and dest subs
-        source_flairs = reddit_retrieve_flairs(source_sub, valid_flairs)
-        dest_flairs = reddit_retrieve_flairs(dest_sub, valid_flairs)
-    else:
-        source_flairs = local_retrieve_flairs(source_sub)
-        dest_flairs = local_retrieve_flairs(dest_sub)
+    # get flairs from source and dest subs
+    source_flairs = reddit_retrieve_flairs(source_sub, valid_flairs)
+    dest_flairs = reddit_retrieve_flairs(dest_sub, valid_flairs)
 
     # show users in source but not dest
     source_only_keys = set(source_flairs.keys()) - set(dest_flairs.keys())
