@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+# vim: ts=4 sts=4 et sw=4
+
+# A script to keep mod-granted trophy flair in sync
+# across Dark Souls subs
+#
+# see flairsync.ini to set options
+
 import sys
 import pickle
 import ConfigParser
@@ -10,6 +18,7 @@ location = 'local'
 r = None
 
 
+# retrieve valid flairs from specified sub
 def reddit_retrieve_flairs(sub_name, valid):
     global debug_level
     global r
@@ -54,6 +63,7 @@ def reddit_retrieve_flairs(sub_name, valid):
     return flairs
 
 
+# retrieve flairs from local storage (assumes valid as they were checked when pulled from reddit)
 def local_retrieve_flairs(sub_name):
     global debug_level
 
@@ -82,6 +92,7 @@ def local_retrieve_flairs(sub_name):
     return flairs
 
 
+# check that new flairs are valid
 def check_new_flairs(sub_name, keys, flairs, valid):
     global debug_level
 
@@ -101,6 +112,7 @@ def check_new_flairs(sub_name, keys, flairs, valid):
     return valid_keys
 
 
+# build list of new flairs to add
 def add_new_flairs(dest_flairs, keys, source_flairs, new_flairs, valid):
     global debug_level
 
@@ -130,7 +142,10 @@ def add_new_flairs(dest_flairs, keys, source_flairs, new_flairs, valid):
                   .format(key, new_flairs[key]['flair_css_class'], new_flairs[key]['flair_text']))
 
 
-def get_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid):
+# retrieve mismatched flairs between source_sub and dest_sub and request user input to resolve conflicts
+#
+# returns a hash of flair strings to set in source_sub and dest_sub
+def build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid):
     global debug_level
 
     non_matching_flairs = { source_sub: {}, dest_sub: {} }
@@ -184,7 +199,7 @@ def get_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid):
                 display_dest_flair = valid_dest_flair if valid_dest_flair != '' else '(none)'
                 display_source_flair = valid_source_flair if valid_source_flair != '' else '(none)'
 
-                print("Mismatched flair for User: {0}, (s)ource: {1}, (d)estination: {2}!"
+                print("Mismatched flair for User: {0}, (s)ource: {1}, (d)estination: {2}"
                       .format(key, display_source_flair, display_dest_flair))
 
                 if debug_level == 'DEBUG':
@@ -193,9 +208,11 @@ def get_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid):
                           '[DEBUG] From (d)estination [/r/{0}]: /r/{1} should have flair class: {2}, but has: {3}.'
                           .format(dest_sub, source_sub, new_source_flair, source_flairs[key]['flair_css_class']))
 
-                sync_flair = raw_input('Sync flair (s/d/n)? ')
+                # ask user to resolve flair mismatch
+                sync_flair = raw_input('Sync flair from (s/d/n)? ')
 
                 if sync_flair == 's':
+                    # set new flair from source_sub
                     non_matching_flairs[dest_sub][key] = {}
                     if key in dest_flairs and 'flair_text' in dest_flairs[key]:
                         non_matching_flairs[dest_sub][key]['flair_text'] = dest_flairs[key]['flair_text']
@@ -203,6 +220,7 @@ def get_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid):
                         non_matching_flairs[dest_sub][key]['flair_text'] = ''
                     non_matching_flairs[dest_sub][key]['flair_css_class'] = new_dest_flair
                 elif sync_flair == 'd':
+                    # set new flair from dest_sub
                     non_matching_flairs[source_sub][key] = {}
                     if key in source_flairs and 'flair_text' in source_flairs[key]:
                         non_matching_flairs[source_sub][key]['flair_text'] = source_flairs[key]['flair_text']
@@ -217,6 +235,7 @@ def get_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid):
     return non_matching_flairs
 
 
+# build response for API call
 def build_csv_response(flairs):
     response = []
     for flair in flairs:
@@ -229,6 +248,7 @@ def build_csv_response(flairs):
     return response
 
 
+# perform the flair updates via a bulk set
 def bulk_set_user_flair(sub_name, flair_mapping):
     global location
 
@@ -348,7 +368,7 @@ def main():
               .format(source_sub))
 
     # show differences in flairs that are in both subs
-    flairs_to_sync = get_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
+    flairs_to_sync = build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
 
     # sync from source_sub to dest_sub
     if len(flairs_to_sync[dest_sub]) > 0:
