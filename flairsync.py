@@ -120,7 +120,7 @@ def reddit_retrieve_flairs(sub_name, valid):
 
 
 # check that new flairs are valid
-def check_new_flairs(sub_name, keys, flairs, valid):
+def validate_flairs(sub_name, keys, flairs, valid):
     global debug_level
 
     valid_keys = set()
@@ -167,6 +167,30 @@ def add_new_flairs(dest_flairs, keys, source_flairs, new_flairs, valid):
         if debug_level == 'NOTICE' or debug_level == 'DEBUG':
             print('[{0}] [NOTICE] Adding User: {1}, flair class: {2}' #, flair text: {3}'
                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, new_flairs[key]['flair_css_class'])) #, new_flairs[key]['flair_text']))
+
+
+# sync users present in source sub but not dest sub
+def sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid):
+    source_only_keys = set(source_flairs.keys()) - set(dest_flairs.keys())
+    source_only_keys = validate_flairs(source_sub, source_only_keys, source_flairs, valid)
+
+    if len(source_only_keys) > 0:
+        print('[{0}] {1} flair(s) present in /r/{2}, but not in /r/{3}'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_only_keys), source_sub, dest_sub))
+
+        new_dest_flairs = {}
+
+        print('Add missing flair(s) to /r/{1}?'
+               .format(dest_sub))
+        add_new_dest = raw_input('(y/n) ')
+
+        if add_new_dest == 'y':
+            add_new_flairs(dest_flairs, source_only_keys, source_flairs, new_dest_flairs, valid)
+            add_new_dest_response = build_csv_response(new_dest_flairs)
+            bulk_set_user_flair(dest_sub, add_new_dest_response)
+    else:
+        print('[{0}] There are no missing flairs in /r/{1}'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub))
 
 
 # retrieve mismatched flairs between source_sub and dest_sub and request user input to resolve conflicts
@@ -271,6 +295,44 @@ def build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid
     return non_matching_flairs
 
 
+# sync users present in boths subs
+def sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid):
+    # find differences in flairs that are in both subs
+    flairs_to_sync = build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid)
+
+    # sync from source_sub to dest_sub
+    if len(flairs_to_sync[dest_sub]) > 0:
+        print('[{0}] Of {1} flair(s) in /r/{2}, {3} require(s) syncing from /r/{4}'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(dest_flairs), dest_sub, len(flairs_to_sync[dest_sub]), source_sub))
+
+        print('Sync flair(s) from /r/{0} to /r/{1}?'
+              .format(source_sub, dest_sub))
+        sync_dest_flairs = raw_input('(y/n) ')
+
+        if sync_dest_flairs == 'y':
+            sync_dest_flairs_response = build_csv_response(flairs_to_sync[dest_sub])
+            bulk_set_user_flair(dest_sub, sync_dest_flairs_response)
+    else:
+        print('[{0}] There are no flairs to sync between /r/{1} and /r/{2}'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
+
+    # sync from dest_sub to source_sub
+    if len(flairs_to_sync[source_sub]) > 0:
+        print('[{0}] Of {1} flair(s) in /r/{2}, {3} require(s) syncing from /r/{4}'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_flairs), source_sub, len(flairs_to_sync[source_sub]), dest_sub))
+
+        print('Sync flair(s) from /r/{0} to /r/{1}?'
+              .format(dest_sub, source_sub))
+        sync_source_flairs = raw_input('(y/n) ')
+
+        if sync_source_flairs == 'y':
+            sync_source_flairs_response = build_csv_response(flairs_to_sync[source_sub])
+            bulk_set_user_flair(source_sub, sync_source_flairs_response)
+    else:
+        print('[{0}] There are no flairs to sync between /r/{1} and /r/{2}'
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub, source_sub))
+
+
 # build response for API call
 def build_csv_response(flairs):
     response = []
@@ -293,7 +355,7 @@ def bulk_set_user_flair(sub_name, flair_mapping):
             break
         except Exception as e:
             sys.stderr.write('[{0}] [ERROR]: Error bulk setting flair: {0}'
-                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
     print('[{0}] Bulk setting {1} flair(s) to /r/{2} successful!'
@@ -333,88 +395,18 @@ def main():
     # login
     reddit_login()
 
-    # get flairs from source and dest subs
+    # retrieve flairs from source and dest subs
     source_flairs = reddit_retrieve_flairs(source_sub, valid_flairs)
     dest_flairs = reddit_retrieve_flairs(dest_sub, valid_flairs)
 
-    # show users in source but not dest
-    source_only_keys = set(source_flairs.keys()) - set(dest_flairs.keys())
-    source_only_keys = check_new_flairs(source_sub, source_only_keys, source_flairs, valid_flairs)
+    # handle flairs present in source sub but not dest
+    sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
 
-    if len(source_only_keys) > 0:
-        print('[{0}] {1} flair(s) present in /r/{2}, but not in /r/{3}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_only_keys), source_sub, dest_sub))
+    # handle flairs present in dest sub but not source
+    sync_missing_flairs(dest_sub, dest_flairs, source_sub, source_flairs, valid_flairs)
 
-        new_dest_flairs = {}
-
-        print('Add missing flair(s) to /r/{1}?'
-               .format(dest_sub))
-        add_new_dest = raw_input('(y/n) ')
-
-        if add_new_dest == 'y':
-            add_new_flairs(dest_flairs, source_only_keys, source_flairs, new_dest_flairs, valid_flairs)
-            add_new_dest_response = build_csv_response(new_dest_flairs)
-            bulk_set_user_flair(dest_sub, add_new_dest_response)
-    else:
-        print('[{0}] There are no missing flairs in /r/{1}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub))
-
-    # show users in dest but not in source
-    dest_only_keys = set(dest_flairs.keys()) - set(source_flairs.keys())
-    dest_only_keys = check_new_flairs(dest_sub, dest_only_keys, dest_flairs, valid_flairs)
-
-    if len(dest_only_keys) > 0:
-        print('[{0}] {1} flair(s) present in /r/{2}, but not in /r/{3}'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(dest_only_keys), dest_sub, source_sub))
-
-        new_source_flairs = {}
-
-        print('Add missing flair(s) to /r/{0}?'
-               .format(source_sub))
-        add_new_source = raw_input('(y/n) ')
-
-        if add_new_source == 'y':
-            add_new_flairs(source_flairs, dest_only_keys, dest_flairs, new_source_flairs, valid_flairs)
-            add_new_source_response = build_csv_response(new_source_flairs)
-            bulk_set_user_flair(source_sub, add_new_source_response)
-    else:
-        print('[{0}] There are no missing flairs in /r/{1}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
-
-    # show differences in flairs that are in both subs
-    flairs_to_sync = build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
-
-    # sync from source_sub to dest_sub
-    if len(flairs_to_sync[dest_sub]) > 0:
-        print('[{0}] Of {1} flair(s) in /r/{2}, {3} require(s) syncing from /r/{4}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(dest_flairs), dest_sub, len(flairs_to_sync[dest_sub]), source_sub))
-
-        print('Sync flair(s) from /r/{0} to /r/{1}?'
-              .format(source_sub, dest_sub))
-        sync_dest_flairs = raw_input('(y/n) ')
-
-        if sync_dest_flairs == 'y':
-            sync_dest_flairs_response = build_csv_response(flairs_to_sync[dest_sub])
-            bulk_set_user_flair(dest_sub, sync_dest_flairs_response)
-    else:
-        print('[{0}] There are no flairs to sync between /r/{1} and /r/{2}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
-
-    # sync from dest_sub to source_sub
-    if len(flairs_to_sync[source_sub]) > 0:
-        print('[{0}] Of {1} flair(s) in /r/{2}, {3} require(s) syncing from /r/{4}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_flairs), source_sub, len(flairs_to_sync[source_sub]), dest_sub))
-
-        print('Sync flair(s) from /r/{0} to /r/{1}?'
-              .format(dest_sub, source_sub))
-        sync_source_flairs = raw_input('(y/n) ')
-
-        if sync_source_flairs == 'y':
-            sync_source_flairs_response = build_csv_response(flairs_to_sync[source_sub])
-            bulk_set_user_flair(source_sub, sync_source_flairs_response)
-    else:
-        print('[{0}] There are no flairs to sync between /r/{1} and /r/{2}'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub, source_sub))
+    # handle flairs present in both subs
+    sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
 
 
 if __name__ == '__main__':
