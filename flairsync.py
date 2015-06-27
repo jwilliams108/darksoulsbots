@@ -6,13 +6,14 @@
 #
 # see flairsync.ini to set options
 
-import sys
+from datetime import datetime
+from praw import Reddit
+import ConfigParser
 import requests
 import requests.auth
-import ConfigParser
 import re
-import praw
-from datetime import datetime
+import sys
+import time
 
 # globals
 debug_level = ''
@@ -20,14 +21,14 @@ cfg_file = None
 r = None
 
 
-# login to reddit
+# login to reddit using OAuth
 def reddit_login():
     global cfg_file
     global r
 
     while True:
         try:
-            r = praw.Reddit(user_agent = cfg_file.get('flairsync', 'user_agent'))
+            r = Reddit(user_agent = cfg_file.get('flairsync', 'user_agent'))
             r.set_oauth_app_info(
                     client_id = cfg_file.get('flairsync', 'client_id'),
                     client_secret = cfg_file.get('flairsync', 'client_secret'),
@@ -189,7 +190,7 @@ def sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid)
             add_new_dest_response = build_csv_response(new_dest_flairs)
             bulk_set_user_flair(dest_sub, add_new_dest_response)
     else:
-        print('[{0}] There are no missing flairs in /r/{1}'
+        print('[{0}] There are no missing valid flairs in /r/{1}'
                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub))
 
 
@@ -313,7 +314,7 @@ def sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, val
             sync_dest_flairs_response = build_csv_response(flairs_to_sync[dest_sub])
             bulk_set_user_flair(dest_sub, sync_dest_flairs_response)
     else:
-        print('[{0}] There are no flairs to sync between /r/{1} and /r/{2}'
+        print('[{0}] There are no valid flairs to sync between /r/{1} and /r/{2}'
                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
 
     # sync from dest_sub to source_sub
@@ -329,8 +330,8 @@ def sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, val
             sync_source_flairs_response = build_csv_response(flairs_to_sync[source_sub])
             bulk_set_user_flair(source_sub, sync_source_flairs_response)
     else:
-        print('[{0}] There are no flairs to sync between /r/{1} and /r/{2}'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub, source_sub))
+        print('[{0}] There are no valid flairs to sync between /r/{1} and /r/{2}'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub, source_sub))
 
 
 # build response for API call
@@ -359,7 +360,7 @@ def bulk_set_user_flair(sub_name, flair_mapping):
             sys.exit()
 
     print('[{0}] Bulk setting {1} flair(s) to /r/{2} successful!'
-            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flair_mapping), sub_name))
+           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flair_mapping), sub_name))
 
 
 def main():
@@ -381,33 +382,41 @@ def main():
             sys.exit()
 
     debug_level = cfg_file.get('debug', 'level')
+    mode = cfg_file.get('flairsync', 'mode')
+    loop_time = cfg_file.get('flairsync', 'loop_time')
     source_sub = cfg_file.get('source', 'source_sub')
     dest_sub = cfg_file.get('source', 'dest_sub')
     valid_flairs = cfg_file.get('flairs', 'valid')
 
-    print('[{0}] Syncing flairs between /r/{1} and /r/{2}...'
-           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
+    # main loop at set interval
+    while True:
+        print('[{0}] Syncing flairs between /r/{1} and /r/{2}...'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
 
-    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        print('[{0}] [NOTICE] Loading flairs...'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+            print('[{0}] [NOTICE] Loading flairs...'
+                   .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
-    # login
-    reddit_login()
+        # login
+        reddit_login()
 
-    # retrieve flairs from source and dest subs
-    source_flairs = reddit_retrieve_flairs(source_sub, valid_flairs)
-    dest_flairs = reddit_retrieve_flairs(dest_sub, valid_flairs)
+        # retrieve flairs from source and dest subs
+        source_flairs = reddit_retrieve_flairs(source_sub, valid_flairs)
+        dest_flairs = reddit_retrieve_flairs(dest_sub, valid_flairs)
 
-    # handle flairs present in source sub but not dest
-    sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
+        # handle flairs present in source sub but not dest
+        sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
 
-    # handle flairs present in dest sub but not source
-    sync_missing_flairs(dest_sub, dest_flairs, source_sub, source_flairs, valid_flairs)
+        # handle flairs present in dest sub but not source
+        sync_missing_flairs(dest_sub, dest_flairs, source_sub, source_flairs, valid_flairs)
 
-    # handle flairs present in both subs
-    sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
+        # handle flairs present in both subs
+        sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
 
+        if mode == 'continuous':
+            time.sleep(loop_time)
+        else:
+            break
 
 if __name__ == '__main__':
     main()
