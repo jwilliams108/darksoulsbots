@@ -383,7 +383,7 @@ def main():
 
     debug_level = cfg_file.get('debug', 'level')
     mode = cfg_file.get('flairsync', 'mode')
-    loop_time = cfg_file.get('flairsync', 'loop_time')
+    loop_time = cfg_file.getint('flairsync', 'loop_time')
     source_sub = cfg_file.get('source', 'source_sub')
     dest_sub = cfg_file.get('source', 'dest_sub')
     valid_flairs = cfg_file.get('flairs', 'valid')
