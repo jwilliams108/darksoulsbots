@@ -267,8 +267,17 @@ def build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid
                           '[DEBUG] From (d)estination [/r/{0}]: /r/{1} should have flair class: {2}, but has: {3}.'
                           .format(dest_sub, source_sub, new_source_flair, source_flairs[key]['flair_css_class']))
 
-                # ask user to resolve flair mismatch
-                sync_flair = raw_input('Sync flair from (s/d/n)? ')
+                if cfg_file.get('flairsync', 'operation') == 'manual':
+                    # query user to resolve flair mismatch
+                    sync_flair = raw_input('Sync flair from (s/d/n)? ')
+                else:
+                    # choose longest string (i.e., most flair), or n if equal
+                    if len(display_source_flair) > len(display_dest_flair):
+                        sync_flair = 's'
+                    elif len(display_source_flair) < len(display_dest_flair):
+                        sync_flair = 'd'
+                    else:
+                        sync_flair = 'n'
 
                 if sync_flair == 's':
                     # set new flair from source_sub
