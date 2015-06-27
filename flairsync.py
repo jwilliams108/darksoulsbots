@@ -17,7 +17,64 @@ import praw
 # globals
 debug_level = ''
 location = 'local'
+cfg_file = None
 r = None
+
+
+# login to reddit
+def reddit_login():
+    global cfg_file
+    global r
+
+    while True:
+        try:
+            r = praw.Reddit(user_agent = cfg_file.get('flairsync', 'user_agent'))
+            r.set_oauth_app_info(
+                    client_id = cfg_file.get('flairsync', 'client_id'),
+                    client_secret = cfg_file.get('flairsync', 'client_secret'),
+                    redirect_uri = 'http://www.example.com/unused/redirect/uri'
+                    'authorize_callback'
+            )
+
+            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                print('[NOTICE] Logging in as {0}...'
+                        .format(cfg_file.get('reddit', 'username')))
+
+            # get OAuth token
+            client_auth = requests.auth.HTTPBasicAuth(
+                    cfg_file.get('flairsync', 'client_id'),
+                    cfg_file.get('flairsync', 'client_secret'),
+            )
+            post_data = {
+                    'grant_type': 'password',
+                    'username': cfg_file.get('reddit', 'username'),
+                    'password': cfg_file.get('reddit', 'password')
+            }
+            headers = { 'User-Agent': cfg_file.get('flairsync', 'user_agent') }
+            response = requests.post(
+                    'https://www.reddit.com/api/v1/access_token',
+                    auth = client_auth,
+                    data = post_data,
+                    headers = headers
+            )
+
+            if response.status_code == 200:
+                # set access credentials using token from reponse
+                token_data = response.json()
+
+                r.set_access_credentials(
+                        set(['modflair']), #token_data['scope'],
+                        token_data['access_token']
+                )
+
+            else:
+                sys.stderr.write('[ERROR]: {0} Reponse code from OAuth attempt'.format(response.status_code))
+                sys.exit()
+
+            break
+        except Exception as e:
+            sys.stderr.write('[ERROR]: {0}'.format(e))
+            sys.exit()
 
 
 # retrieve valid flairs from specified sub
@@ -273,6 +330,7 @@ def bulk_set_user_flair(sub_name, flair_mapping):
 def main():
     global debug_level
     global location
+    global cfg_file
     global r
 
     source_flairs = {}
@@ -302,56 +360,8 @@ def main():
               .format(location))
 
     if location == 'reddit':
-        # login to reddit
-        while True:
-            try:
-                r = praw.Reddit(user_agent = cfg_file.get('flairsync', 'user_agent'))
-                r.set_oauth_app_info(
-                        client_id = cfg_file.get('flairsync', 'client_id'),
-                        client_secret = cfg_file.get('flairsync', 'client_secret'),
-                        redirect_uri = 'http://www.example.com/unused/redirect/uri'
-                        'authorize_callback'
-                )
-
-                if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                    print('[NOTICE] Logging in as {0}...'
-                          .format(cfg_file.get('reddit', 'username')))
-
-                # get OAuth token
-                client_auth = requests.auth.HTTPBasicAuth(
-                        cfg_file.get('flairsync', 'client_id'),
-                        cfg_file.get('flairsync', 'client_secret'),
-                )
-                post_data = {
-                        'grant_type': 'password',
-                        'username': cfg_file.get('reddit', 'username'),
-                        'password': cfg_file.get('reddit', 'password')
-                }
-                headers = { 'User-Agent': cfg_file.get('flairsync', 'user_agent') }
-                response = requests.post(
-                        'https://www.reddit.com/api/v1/access_token',
-                        auth = client_auth,
-                        data = post_data,
-                        headers = headers
-                )
-
-                if response.status_code == 200:
-                    # set access credentials using token from reponse
-                    token_data = response.json()
-
-                    r.set_access_credentials(
-                            set(['modflair']), #token_data['scope'],
-                            token_data['access_token']
-                    )
-
-                else:
-                    sys.stderr.write('[ERROR]: {0} Reponse code from OAuth attempt'.format(response.status_code))
-                    sys.exit()
-
-                break
-            except Exception as e:
-                sys.stderr.write('[ERROR]: {0}'.format(e))
-                sys.exit()
+        # login
+        reddit_login()
 
         # get flairs from source and dest subs
         source_flairs = reddit_retrieve_flairs(source_sub, valid_flairs)
