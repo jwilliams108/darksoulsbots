@@ -172,6 +172,8 @@ def add_new_flairs(dest_flairs, keys, source_flairs, new_flairs, valid):
 
 # sync users present in source sub but not dest sub
 def sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid):
+    global cfg_file
+
     source_only_keys = set(source_flairs.keys()) - set(dest_flairs.keys())
     source_only_keys = validate_flairs(source_sub, source_only_keys, source_flairs, valid)
 
@@ -181,9 +183,12 @@ def sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid)
 
         new_dest_flairs = {}
 
-        print('Add missing flair(s) to /r/{1}?'
-               .format(dest_sub))
-        add_new_dest = raw_input('(y/n) ')
+        if cfg_file.get('flairsync', 'operation') == 'automatic':
+            add_new_dest = 'y'
+        else:
+            print('Add missing flair(s) to /r/{0}?'
+                .format(dest_sub))
+            add_new_dest = raw_input('(y/n) ')
 
         if add_new_dest == 'y':
             add_new_flairs(dest_flairs, source_only_keys, source_flairs, new_dest_flairs, valid)
@@ -260,7 +265,7 @@ def build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid
                         '[{0}] [DEBUG] From (d)estination [/r/{1}]: /r/{2} should have flair class: {3}, but has: {4}.'
                         .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub, source_sub, new_source_flair, source_flairs[key]['flair_css_class']))
 
-                if cfg_file.get('flairsync', 'operation') == 'manual':
+                if cfg_file.get('flairsync', 'operation') != 'automatic':
                     # query user to resolve flair mismatch
                     sync_flair = raw_input('Sync flair from (s/d/n)? ')
                 else:
@@ -298,6 +303,10 @@ def build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid
 
 # sync users present in boths subs
 def sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid):
+    global cfg_file
+
+    operation = cfg_file.get('flairsync', 'operation')
+
     # find differences in flairs that are in both subs
     flairs_to_sync = build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid)
 
@@ -306,9 +315,12 @@ def sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, val
         print('[{0}] Of {1} flair(s) in /r/{2}, {3} require(s) syncing from /r/{4}'
                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(dest_flairs), dest_sub, len(flairs_to_sync[dest_sub]), source_sub))
 
-        print('Sync flair(s) from /r/{0} to /r/{1}?'
-              .format(source_sub, dest_sub))
-        sync_dest_flairs = raw_input('(y/n) ')
+        if operation == 'automatic':
+            sync_dest_flairs = 'y'
+        else:
+            print('Sync flair(s) from /r/{0} to /r/{1}?'
+                   .format(source_sub, dest_sub))
+            sync_dest_flairs = raw_input('(y/n) ')
 
         if sync_dest_flairs == 'y':
             sync_dest_flairs_response = build_csv_response(flairs_to_sync[dest_sub])
@@ -322,9 +334,12 @@ def sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, val
         print('[{0}] Of {1} flair(s) in /r/{2}, {3} require(s) syncing from /r/{4}'
                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_flairs), source_sub, len(flairs_to_sync[source_sub]), dest_sub))
 
-        print('Sync flair(s) from /r/{0} to /r/{1}?'
-              .format(dest_sub, source_sub))
-        sync_source_flairs = raw_input('(y/n) ')
+        if operation == 'automatic':
+            sync_source_flairs = 'y'
+        else:
+            print('Sync flair(s) from /r/{0} to /r/{1}?'
+                   .format(dest_sub, source_sub))
+            sync_source_flairs = raw_input('(y/n) ')
 
         if sync_source_flairs == 'y':
             sync_source_flairs_response = build_csv_response(flairs_to_sync[source_sub])
