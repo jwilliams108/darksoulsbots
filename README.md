@@ -1,4 +1,4 @@
-# flairsync
+# FlairSync
 A python script/bot for [reddit](http://www.reddit.com) to keep flair in sync across related subreddits
 
 ## Requirements
