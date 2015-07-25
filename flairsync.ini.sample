@@ -1,0 +1,21 @@
+[flairsync]
+user_agent    = FlairSync by /u/jwilliams108
+client_id     = {{client_id}}
+client_secret = {{client_secret}}
+mode          = continuous
+loop_time     = 180
+operation     = automatic
+
+[reddit]
+username   = {{username}}
+password   = {{password}}
+
+[source]
+source_sub = {{subname}}
+dest_sub   = {{subname}}
+
+[flairs]
+valid = {{regex}}
+
+[debug]
+level = NOTICE
