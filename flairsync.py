@@ -258,10 +258,10 @@ def bulk_set_user_flair(sub_name, response):
     print('[{}] Syncing flairs to /r/{}'
             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name))
 
-    #if debug_level == 'DEBUG':
-    for row in response:
-        print('[{}] [DEBUG] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
-            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
+    if debug_level == 'DEBUG':
+        for row in response:
+            print('[{}] [DEBUG] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
 
     # execute upload
     while True:
