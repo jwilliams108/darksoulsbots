@@ -270,12 +270,16 @@ def build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid
                     sync_flair = raw_input('Sync flair from (s/d/n)? ')
                 else:
                     # choose longest string (i.e., most flair), or n if equal
-                    if len(display_source_flair) > len(display_dest_flair):
+                    if len(valid_source_flair) > len(valid_dest_flair):
                         sync_flair = 's'
-                    elif len(display_source_flair) < len(display_dest_flair):
+                    elif len(valid_source_flair) < len(valid_dest_flair):
                         sync_flair = 'd'
                     else:
                         sync_flair = 'n'
+
+                if debug_level == 'DEBUG':
+                    print("[{}] [DEBUG] Selecting '{}' after comparing lengths: (s)ource: {} ({}), (d)estination: {} ({})"
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sync_flair, display_source_flair, len(valid_source_flair), display_dest_flair, len(valid_dest_flair)))
 
                 if sync_flair == 's':
                     # set new flair from source_sub
