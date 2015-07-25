@@ -1,5 +1,5 @@
 # flairsync
-A python script/bot for [reddit](http://www.reddit.com) to keep moderator-granted trophy flair in sync across related subreddits
+A python script/bot for [reddit](http://www.reddit.com) to keep flair in sync across related subreddits
 
 ## Requirements
 
@@ -7,7 +7,7 @@ FlairSync requires [PRAW](http://praw.readthedocs.org/en/latest/index.html), and
 
 # Getting Started
 
-To begin, create a flairsync.ini file from the sample provided, modifying fields as necessary - setup your source and destination subreddits, as well as user and application credentials.
+To begin, create a flairsync.ini file from the sample provided, modifying fields as necessary - setup your source and destination subreddits, as well as user and application credentials, and specify which flair(s) are considered valid (i.e., which to sync) via a regular expression.
 
 You may choose between continuous or single mode - the former will keep the script running, executing the sync at an interval specified by loop_time (in seconds).
 
