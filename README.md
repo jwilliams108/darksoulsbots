@@ -7,7 +7,7 @@ FlairSync requires [PRAW](http://praw.readthedocs.org/en/latest/index.html), and
 
 # Getting Started
 
-To begin, create a flairsync.ini file from the sample provided, modifying fields as necessary - setup your source and destination subreddits, as well as user and application credentials, and specify which flair(s) are considered valid (i.e., which to sync) via a regular expression.
+To begin, create a flairsync.ini file from the sample provided, modifying fields as necessary - setup a list of your subreddits, as well as user and application credentials, and specify which flair(s) are considered valid (i.e., which to sync) via a regular expression.
 
 You may choose between continuous or single mode - the former will keep the script running, executing the sync at an interval specified by loop_time (in seconds).
 
@@ -16,3 +16,14 @@ You may also choose between automatic or manual operation - automatic will deter
 In general, continuous and automatic mode/operation are meant to work together as a bot, while single and manual mode/operation are meant to function as a script.
 
 Output verbosity can be changed by altering the debug level to DEBUG from NOTICE for more information on the actions being taken by the flairsync script.
+
+## What's New
+
+New version now supports syncing across more than two subs - note that currently there is no manual mode, only automatic
+(based on longest flair). This is due to the fact that this script is used across a set of subs that share platinum
+trophy flair - one for each game. Therefore, the longest flair string contains the most trophies and is considered the
+preferred flair.
+
+### TODO
+* (re)add manual mode
+* only login if credentials have expired

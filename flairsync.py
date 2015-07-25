@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # vim: ts=4 sts=4 et sw=4
 
-# A script to keep mod-granted trophy flair in sync
-# across Dark Souls subs
+# A script/bot for reddit to keep flair in sync across related subreddits
 #
 # see flairsync.ini to set options
 
@@ -23,7 +22,6 @@ r = None
 
 # login to reddit using OAuth
 def reddit_login():
-    global cfg_file
     global r
 
     while True:
@@ -38,7 +36,7 @@ def reddit_login():
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 print('[{}] [NOTICE] Logging in as {}...'
-                       .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('reddit', 'username')))
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('reddit', 'username')))
 
             # get OAuth token
             client_auth = requests.auth.HTTPBasicAuth(
@@ -69,328 +67,224 @@ def reddit_login():
 
             else:
                 sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth attempt'
-                                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
                 sys.exit()
 
             break
         except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: {}'
-                              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
 
-# retrieve valid flairs from specified sub
-def reddit_retrieve_flairs(sub_name, valid):
-    global debug_level
-    global r
+# validate individual flair
+def get_valid_flair(flair, valid_flairs):
+    valid_flair = ''
 
+    # check that new flairs contain valid flair
+    match = re.search(valid_flairs, flair)
+
+    if match is not None:
+        valid_flair = match.group()
+
+    return valid_flair
+
+
+# if key exists, get other flair (not valid) substring from list
+def get_other_flair(flair, valid_flairs):
+    other_flair = ''
+
+    # check if other non-valid flair is present
+    split_flair = re.split(valid_flairs, flair)
+
+    if len(split_flair) == 1:
+        other_flair = split_flair[0].strip()
+    elif len(split_flair) == 2:
+        # handle if other flair comes before or after split flair
+        if split_flair[0].strip() == '':
+            other_flair = split_flair[1].strip()
+        else:
+            other_flair = split_flair[0].strip()
+
+    return other_flair
+
+
+# retrieve valid flairs from specified subs
+def reddit_retrieve_flairs(sub_names, valid_flairs):
     flairs = {}
 
-    # get flairs
-    sub = r.get_subreddit(sub_name)
-    flair_list = sub.get_flair_list(limit=None)
+    print('[{}] Loading flairs...'
+            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
-    for index, flair in enumerate(flair_list):
-        # progress indicator
+    # get flairs
+    for sub_name in sub_names:
+        sub = r.get_subreddit(sub_name)
+        flair_list = sub.get_flair_list(limit=None)
+        sub_flairs = {}
+
+        for index, flair in enumerate(flair_list):
+            # progress indicator
+            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                sys.stdout.write('[%s] [NOTICE] Retrieving %i flair(s) from /r/%s...\r' %
+                                (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
+                sys.stdout.flush()
+
+            if flair['flair_css_class'] is not None:
+                valid_flair = get_valid_flair(flair['flair_css_class'], valid_flairs)
+                other_flair = get_other_flair(flair['flair_css_class'], valid_flairs)
+
+                if valid_flair != '':
+                    sub_flairs[flair['user']] = {}
+                    sub_flairs[flair['user']]['valid_flair'] = valid_flair
+                    sub_flairs[flair['user']]['other_flair'] = other_flair
+
+                    if flair['flair_text'] is not None:
+                        sub_flairs[flair['user']]['flair_text'] = flair['flair_text']
+                    else:
+                        sub_flairs[flair['user']]['flair_text'] = ''
+
+                    if debug_level == 'DEBUG':
+                        print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {}' # and flair text: \'{}\''
+                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class'])) #, flair['flair_text']))
+
         if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-            sys.stdout.write('[%s] [NOTICE] Processing %i flair(s) from /r/%s...\r' %
-                              (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
+            sys.stdout.write('\n')
             sys.stdout.flush()
 
-        flairs[flair['user']] = {}
-
-        if flair['flair_text'] is not None:
-            flairs[flair['user']]['flair_text'] = flair['flair_text']
-        else:
-            flairs[flair['user']]['flair_text'] = ''
-
-        if flair['flair_css_class'] is not None:
-            flairs[flair['user']]['flair_css_class'] = flair['flair_css_class']
-        else:
-            flairs[flair['user']]['flair_css_class'] = ''
-
-        if debug_level == 'DEBUG':
-            print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {}' # and flair text: \'{}\''
-                   .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class'])) #, flair['flair_text']))
-
-    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        flairs[sub_name] = sub_flairs
 
     return flairs
 
 
-# check that new flairs are valid
-def validate_flairs(sub_name, keys, flairs, valid):
-    global debug_level
+# merge valid flairs from source_subs
+def merge_flairs(source_subs, source_flairs, valid_flairs):
+    merged_flairs = {}
 
-    valid_keys = set()
+    for source_sub in source_subs:
+        print('[{}] Merging flairs from /r/{}'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
-    for key in keys:
-        # check that new flairs contain valid flair
-        match = re.search(valid, flairs[key]['flair_css_class'])
+        # determine new flairs as well as flairs in both merge and source_sub
+        source_only_keys = set(source_flairs[source_sub].keys()) - set(merged_flairs.keys())
+        both_keys = set.intersection(set(source_flairs[source_sub].keys()), set(merged_flairs.keys()))
 
-        if match is not None:
-            valid_keys.add(key)
+        # merge all flairs from source_sub not already present in merge_flairs
+        if len(source_only_keys) > 0:
+            for key in source_only_keys:
+                merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                print('[{}] [NOTICE] Only in /r/{} User: {} has flair class: {}'
-                       .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, key, match.group()))
-
-    return valid_keys
-
-
-# build list of new flairs to add
-def add_new_flairs(dest_flairs, keys, source_flairs, new_flairs, valid):
-    global debug_level
-
-    for key in keys:
-        new_flairs[key] = {}
-
-        # copy existing flair text if present
-        if key in dest_flairs and 'flair_text' in dest_flairs[key]:
-            new_flairs[key]['flair_text'] = dest_flairs[key]['flair_text']
+                print('[{}] [NOTICE] {} new valid flair(s) merged from /r/{}'
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_only_keys), source_sub))
         else:
-            new_flairs[key]['flair_text'] = ''
+            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                print('[{}] [NOTICE] There are no valid new flairs to merge from /r/{} '
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
-        # only copy the valid flair substring
-        match = re.search(valid, source_flairs[key]['flair_css_class'])
+        # update flair present in both current source_sub and merged_flairs
+        if len(both_keys) > 0:
+            both_count = 0
 
-        if match is not None:
-            if key in dest_flairs:
-                # keep existing non-valid dest flairs
-                new_flairs[key]['flair_css_class'] = dest_flairs[key]['flair_css_class'] + match.group()
-            else:
-                new_flairs[key]['flair_css_class'] = match.group()
-        #else:
-            # we shouldn't get here as there must be a valid flair
+            for key in both_keys:
+                merged_flair = merged_flairs[key]
+                source_flair = source_flairs[source_sub][key]['valid_flair']
 
-        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-            print('[{}] [NOTICE] Adding User: {}, flair class: {}' #, flair text: {}'
-                   .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, new_flairs[key]['flair_css_class'])) #, new_flairs[key]['flair_text']))
+                # only work with the valid flair substring - we know valid flairs are present
+                # but there still may be additional invalid/ignorable flair
+                merged_flair = get_valid_flair(merged_flair, valid_flairs)
+                source_flair = get_valid_flair(source_flair, valid_flairs)
 
+                if len(merged_flair) < len(source_flair):
+                    # choose longest flair for merge
+                    both_count += 1
+                    merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
 
-# sync users present in source sub but not dest sub
-def sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid):
-    global cfg_file
+                    if debug_level == 'DEBUG':
+                        print('[{}] [DEBUG] User: {} has merged flair class: {}, and source flair class: {}'
+                                .format( datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, merged_flairs[key], source_flair))
 
-    source_only_keys = set(source_flairs.keys()) - set(dest_flairs.keys())
-    source_only_keys = validate_flairs(source_sub, source_only_keys, source_flairs, valid)
+            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                print('[{}] [NOTICE] {} updated valid flair(s) merged from /r/{}'
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
 
-    if len(source_only_keys) > 0:
-        print('[{}] {} flair(s) present in /r/{}, but not in /r/{}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_only_keys), source_sub, dest_sub))
+        current_sub = source_sub
 
-        new_dest_flairs = {}
-
-        if cfg_file.get('flairsync', 'operation') == 'automatic':
-            add_new_dest = 'y'
-        else:
-            print('Add missing flair(s) to /r/{}?'
-                .format(dest_sub))
-            add_new_dest = raw_input('(y/n) ')
-
-        if add_new_dest == 'y':
-            add_new_flairs(dest_flairs, source_only_keys, source_flairs, new_dest_flairs, valid)
-            add_new_dest_response = build_csv_response(new_dest_flairs)
-            bulk_set_user_flair(dest_sub, add_new_dest_response)
-    else:
-        print('[{}] There are no missing valid flairs in /r/{}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub))
+    return merged_flairs
 
 
-# retrieve mismatched flairs between source_sub and dest_sub and request user input to resolve conflicts
-#
-# returns a hash of flair strings to set in source_sub and dest_sub
-def build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid):
-    global debug_level
+# sync merged_flairs to source_subs
+def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
+    for source_sub in source_subs:
+        print('[{}] Checking for flairs to sync to /r/{}'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
-    non_matching_flairs = { source_sub: {}, dest_sub: {} }
-    index = 0
+        response = []
 
-    for key in source_flairs.keys():
-        index += 1
-        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-            sys.stdout.write('[%s] [NOTICE] Comparing %i flair(s) in /r/%s to /r/%s...\r' %
-                              (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, source_sub, dest_sub))
-            sys.stdout.flush()
+        # determine flairs to sync as flairs in merge set but not source set,
+        # as well as flairs present in both sets that do not match
+        merge_only_keys = set(merged_flairs.keys()) - set(source_flairs[source_sub].keys())
+        both_keys = set.intersection(set(source_flairs[source_sub].keys()), set(merged_flairs.keys()))
+        keys_to_sync = merge_only_keys | set(user for user in both_keys if source_flairs[source_sub][user]['valid_flair'] != merged_flairs[user])
 
-        if key in dest_flairs.keys():
-            valid_source_flair = ''
-            valid_dest_flair = ''
+        for user in keys_to_sync:
+            source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
+            other_flair = source_flairs[source_sub][user]['other_flair'] if user in source_flairs[source_sub] else ''
+            merged_flair = merged_flairs[user]
 
-            # only replace valid flair substring, there may be others
-            if re.search(valid, source_flairs[key]['flair_css_class']) is not None:
-                valid_source_flair = re.search(valid, source_flairs[key]['flair_css_class']).group()
+            if debug_level == 'DEBUG':
+                print("[{}] [DEBUG] In /r/{}, syncing flair for User: {}, old: {}, new: {}, other: {}"
+                        .format(
+                            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            source_sub,
+                            user,
+                            source_flair if source_flair != '' else '(none)',
+                            merged_flair if merged_flair != '' else '(none)',
+                            other_flair if other_flair != '' else '(none)'
+                            )
+                        )
 
-            if re.search(valid, dest_flairs[key]['flair_css_class']) is not None:
-                valid_dest_flair = re.search(valid, dest_flairs[key]['flair_css_class']).group()
+            row = {}
+            row['user'] = user
+            row['flair_text'] = source_flairs[source_sub][user]['flair_text'] if user in source_flairs[source_sub] else ''
+            row['flair_css_class'] = ' '.join( [other_flair, merged_flair] ) if other_flair != '' else merged_flair
+            response.append(row)
 
-            if valid_dest_flair != valid_source_flair:
-                other_dest_flair = re.split(valid, dest_flairs[key]['flair_css_class'])
-                other_source_flair = re.split(valid, source_flairs[key]['flair_css_class'])
-                new_dest_flair = ''
-                new_source_flair = ''
-
-                if valid_source_flair != '':
-                    if len(other_source_flair) == 1:
-                        # source flair did not contain a valid flair substring
-                        new_source_flair = other_source_flair[0] + ' ' + valid_dest_flair
-                    elif len(other_source_flair) == 2:
-                        new_source_flair = other_source_flair[0] + valid_dest_flair + other_source_flair[1]
-
-                    if len(other_dest_flair) == 1:
-                        # dest flair did not contain a valid flair substring
-                        new_dest_flair = other_dest_flair[0] + ' ' + valid_source_flair
-                    elif len(other_dest_flair) == 2:
-                        new_dest_flair = other_dest_flair[0] + valid_source_flair + other_dest_flair[1]
-                else:
-                    # source flair did not contain a valid flair substring
-                    # although we can assume dest flair has a valid flair
-                    # substring otherwise we would not have reached this point
-                    new_source_flair = other_source_flair[0] + ' ' + valid_dest_flair
-                    new_dest_flair = other_dest_flair[0] + other_dest_flair[1]
-
-                new_dest_flair = new_dest_flair.strip()
-                new_source_flair = new_source_flair.strip()
-                display_dest_flair = valid_dest_flair if valid_dest_flair != '' else '(none)'
-                display_source_flair = valid_source_flair if valid_source_flair != '' else '(none)'
-
-                print("[{}] Mismatched flair for User: {}, (s)ource: {}, (d)estination: {}"
-                       .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, display_source_flair, display_dest_flair))
-
-                if debug_level == 'DEBUG':
-                    print("[{}] [DEBUG] From (s)ource [/r/{}]: /r/{} should have flair class: {}, but has: {}\n"
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub, new_dest_flair, dest_flairs[key]['flair_css_class']) +
-                        '[{}] [DEBUG] From (d)estination [/r/{}]: /r/{} should have flair class: {}, but has: {}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub, source_sub, new_source_flair, source_flairs[key]['flair_css_class']))
-
-                if cfg_file.get('flairsync', 'operation') != 'automatic':
-                    # query user to resolve flair mismatch
-                    sync_flair = raw_input('Sync flair from (s/d/n)? ')
-                else:
-                    # choose longest string (i.e., most flair), or n if equal
-                    if len(valid_source_flair) > len(valid_dest_flair):
-                        sync_flair = 's'
-                    elif len(valid_source_flair) < len(valid_dest_flair):
-                        sync_flair = 'd'
-                    else:
-                        sync_flair = 'n'
-
-                if debug_level == 'DEBUG':
-                    print("[{}] [DEBUG] Selecting '{}' after comparing lengths: (s)ource: {} ({}), (d)estination: {} ({})"
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sync_flair, display_source_flair, len(valid_source_flair), display_dest_flair, len(valid_dest_flair)))
-
-                if sync_flair == 's':
-                    # set new flair from source_sub
-                    non_matching_flairs[dest_sub][key] = {}
-                    if key in dest_flairs and 'flair_text' in dest_flairs[key]:
-                        non_matching_flairs[dest_sub][key]['flair_text'] = dest_flairs[key]['flair_text']
-                    else:
-                        non_matching_flairs[dest_sub][key]['flair_text'] = ''
-                    non_matching_flairs[dest_sub][key]['flair_css_class'] = new_dest_flair
-                elif sync_flair == 'd':
-                    # set new flair from dest_sub
-                    non_matching_flairs[source_sub][key] = {}
-                    if key in source_flairs and 'flair_text' in source_flairs[key]:
-                        non_matching_flairs[source_sub][key]['flair_text'] = source_flairs[key]['flair_text']
-                    else:
-                        non_matching_flairs[source_sub][key]['flair_text'] = ''
-                    non_matching_flairs[source_sub][key]['flair_css_class'] = new_source_flair
-
-    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        sys.stdout.write('\n')
-        sys.stdout.flush()
-
-    return non_matching_flairs
-
-
-# sync users present in boths subs
-def sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid):
-    global cfg_file
-
-    operation = cfg_file.get('flairsync', 'operation')
-
-    # find differences in flairs that are in both subs
-    flairs_to_sync = build_flairs_to_sync(source_sub, source_flairs, dest_sub, dest_flairs, valid)
-
-    # sync from source_sub to dest_sub
-    if len(flairs_to_sync[dest_sub]) > 0:
-        print('[{}] Of {} flair(s) in /r/{}, {} require(s) syncing from /r/{}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(dest_flairs), dest_sub, len(flairs_to_sync[dest_sub]), source_sub))
-
-        if operation == 'automatic':
-            sync_dest_flairs = 'y'
-        else:
-            print('Sync flair(s) from /r/{} to /r/{}?'
-                   .format(source_sub, dest_sub))
-            sync_dest_flairs = raw_input('(y/n) ')
-
-        if sync_dest_flairs == 'y':
-            sync_dest_flairs_response = build_csv_response(flairs_to_sync[dest_sub])
-            bulk_set_user_flair(dest_sub, sync_dest_flairs_response)
-    else:
-        print('[{}] There are no valid flairs to sync between /r/{} and /r/{}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
-
-    # sync from dest_sub to source_sub
-    if len(flairs_to_sync[source_sub]) > 0:
-        print('[{}] Of {} flair(s) in /r/{}, {} require(s) syncing from /r/{}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_flairs), source_sub, len(flairs_to_sync[source_sub]), dest_sub))
-
-        if operation == 'automatic':
-            sync_source_flairs = 'y'
-        else:
-            print('Sync flair(s) from /r/{} to /r/{}?'
-                   .format(dest_sub, source_sub))
-            sync_source_flairs = raw_input('(y/n) ')
-
-        if sync_source_flairs == 'y':
-            sync_source_flairs_response = build_csv_response(flairs_to_sync[source_sub])
-            bulk_set_user_flair(source_sub, sync_source_flairs_response)
-    else:
-        print('[{}] There are no valid flairs to sync between /r/{} and /r/{}'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dest_sub, source_sub))
-
-
-# build response for API call
-def build_csv_response(flairs):
-    response = []
-    for flair in flairs:
-        row = {}
-        row['user'] = flair
-        row['flair_text'] = flairs[flair]['flair_text']
-        row['flair_css_class'] = flairs[flair]['flair_css_class']
-        response.append(row)
-
-    return response
+        # send response to reddit if there are flairs to sync
+        if len(response) > 0:
+            bulk_set_user_flair(source_sub, response)
 
 
 # perform the flair updates via a bulk set
-def bulk_set_user_flair(sub_name, flair_mapping):
+def bulk_set_user_flair(sub_name, response):
+    print('[{}] Syncing flairs to /r/{}'
+            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name))
+
+    #if debug_level == 'DEBUG':
+    for row in response:
+        print('[{}] [DEBUG] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
+            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
+
     # execute upload
     while True:
         try:
-            r.get_subreddit(sub_name).set_flair_csv(flair_mapping)
+            r.get_subreddit(sub_name).set_flair_csv(response)
             break
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}'
-                              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
     print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
-           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flair_mapping), sub_name))
+           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
 
 
 def main():
-    global debug_level
     global cfg_file
-    global r
+    global debug_level
 
     source_flairs = {}
-    dest_flairs = {}
+    merged_flairs = {}
 
-    # read config
+    # read ini and set config
     cfg_file = ConfigParser.RawConfigParser()
     while True:
         try:
@@ -403,34 +297,25 @@ def main():
     debug_level = cfg_file.get('debug', 'level')
     mode = cfg_file.get('flairsync', 'mode')
     loop_time = cfg_file.getint('flairsync', 'loop_time')
-    source_sub = cfg_file.get('source', 'source_sub')
-    dest_sub = cfg_file.get('source', 'dest_sub')
+    source_subs = (cfg_file.get('source', 'source_subs')).split(',')
     valid_flairs = cfg_file.get('flairs', 'valid')
 
-    # main loop at set interval
+    # main loop at set interval if mode is set to 'continuous'
     while True:
-        print('[{}] Syncing flairs between /r/{} and /r/{}...'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub, dest_sub))
-
-        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-            print('[{}] [NOTICE] Loading flairs...'
-                   .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        print('[{}] Starting flair sync...'
+               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
         # login
         reddit_login()
 
-        # retrieve flairs from source and dest subs
-        source_flairs = reddit_retrieve_flairs(source_sub, valid_flairs)
-        dest_flairs = reddit_retrieve_flairs(dest_sub, valid_flairs)
+        # retrieve valid flairs from each sub
+        source_flairs = reddit_retrieve_flairs(source_subs, valid_flairs)
 
-        # handle flairs present in source sub but not dest
-        sync_missing_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
+        # build list of flairs to merge from source_subs
+        merged_flairs = merge_flairs(source_subs, source_flairs, valid_flairs)
 
-        # handle flairs present in dest sub but not source
-        sync_missing_flairs(dest_sub, dest_flairs, source_sub, source_flairs, valid_flairs)
-
-        # handle flairs present in both subs
-        sync_mismatched_flairs(source_sub, source_flairs, dest_sub, dest_flairs, valid_flairs)
+        # sync merged flairs
+        sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs)
 
         if mode == 'continuous':
             time.sleep(loop_time)
