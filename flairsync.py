@@ -182,6 +182,10 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
 
         # update flair present in both current source_sub and merged_flairs
         if len(both_keys) > 0:
+            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                print('[{}] [NOTICE] Checking existing flair(s) from /r/{}...'
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
+
             both_count = 0
 
             for key in both_keys:
@@ -193,18 +197,33 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
                 merged_flair = get_valid_flair(merged_flair, valid_flairs)
                 source_flair = get_valid_flair(source_flair, valid_flairs)
 
-                if len(merged_flair) < len(source_flair):
-                    # choose longest flair for merge
-                    both_count += 1
-                    merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
+                if merged_flair != source_flair:
+                    operation = cfg_file.get('flairsync', 'operation')
+                    sync_flair = ''
 
-                    if debug_level == 'DEBUG':
-                        print('[{}] [DEBUG] User: {} has merged flair class: {}, and source flair class: {}'
-                                .format( datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, merged_flairs[key], source_flair))
+                    if operation != 'automatic' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                        print("[{}] [NOTICE] Mismatched flair for User: {}, (m)erged: {}, (s)ource: {}"
+                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, merged_flair, source_flair))
+
+                    if operation != 'automatic':
+                        # query user to resolve flair mismatch
+                        sync_flair = raw_input('Sync flair from (m/s/n)? ')
+                    else:
+                        # choose longest flair for merge
+                        if len(merged_flair) < len(source_flair):
+                            sync_flair = 's'
+
+                    if sync_flair == 's':
+                        both_count += 1
+                        merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                print('[{}] [NOTICE] {} updated valid flair(s) merged from /r/{}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
+                if both_keys > 0:
+                    print('[{}] [NOTICE] {} updated valid flair(s) merged from /r/{}'
+                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
+                else:
+                    print('[{}] [NOTICE] There are no valid updated flair(s) to merge from /r/{}'
+                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
 
         current_sub = source_sub
 
@@ -214,7 +233,7 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
 # sync merged_flairs to source_subs
 def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
     for source_sub in source_subs:
-        print('[{}] Checking for flairs to sync to /r/{}'
+        print('[{}] Checking for flairs to sync to /r/{}...'
                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
         response = []
@@ -255,26 +274,33 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
 
 # perform the flair updates via a bulk set
 def bulk_set_user_flair(sub_name, response):
-    print('[{}] Syncing flairs to /r/{}'
-            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name))
-
-    if debug_level == 'DEBUG':
+    if cfg_file.get('flairsync', 'operation') != 'automatic' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
         for row in response:
-            print('[{}] [DEBUG] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
+            print('[{}] [NOTICE] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
 
-    # execute upload
-    while True:
-        try:
-            r.get_subreddit(sub_name).set_flair_csv(response)
-            break
-        except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-            sys.exit()
+    # confirm operation or proceed if automatic
+    if cfg_file.get('flairsync', 'operation') != 'automatic':
+        print('Sync {} flair(s) to /r/{}?'.format(len(response), sub_name))
+        sync_flairs = raw_input('(y/n) ')
+    else:
+        print('[{}] Syncing {} flair(s) to /r/{}'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+        sync_flairs = 'y'
 
-    print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
-           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+    if sync_flairs == 'y':
+        # execute upload
+        while True:
+            try:
+                r.get_subreddit(sub_name).set_flair_csv(response)
+                break
+            except Exception as e:
+                sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}'
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                sys.exit()
+
+        print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
 
 
 def main():
@@ -303,7 +329,7 @@ def main():
     # main loop at set interval if mode is set to 'continuous'
     while True:
         print('[{}] Starting flair sync...'
-               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
         # login
         reddit_login()
@@ -318,6 +344,8 @@ def main():
         sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs)
 
         if mode == 'continuous':
+            print('[{}] Pausing flair sync...'
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             time.sleep(loop_time)
         else:
             break
