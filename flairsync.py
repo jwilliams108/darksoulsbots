@@ -156,9 +156,7 @@ def reddit_retrieve_flairs(sub_names, valid_flairs):
 
 
 # merge valid flairs from source_subs
-def merge_flairs(source_subs, source_flairs, valid_flairs):
-    merged_flairs = {}
-
+def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
     for source_sub in source_subs:
         print('[{}] Merging flairs from /r/{}'
                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
@@ -338,7 +336,7 @@ def main():
         source_flairs = reddit_retrieve_flairs(source_subs, valid_flairs)
 
         # build list of flairs to merge from source_subs
-        merged_flairs = merge_flairs(source_subs, source_flairs, valid_flairs)
+        merged_flairs = merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs)
 
         # sync merged flairs
         sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs)
