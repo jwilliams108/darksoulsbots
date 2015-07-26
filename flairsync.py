@@ -198,11 +198,10 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
                     operation = cfg_file.get('flairsync', 'operation')
                     sync_flair = ''
 
-                    if operation != 'automatic' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                        print("[{}] [NOTICE] Mismatched flair for User: {}, (m)erged: {}, (s)ource: {}, (c)ustom"
+                    if operation != 'automatic':
+                        print("[{}] Mismatched flair for User: {}, (m)erged: {}, (s)ource: {}, (c)ustom"
                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, merged_flair, source_flair))
 
-                    if operation != 'automatic':
                         # query user to resolve flair mismatch
                         sync_flair = raw_input('Sync flair from (m/s/c/n)? ')
                     else:
