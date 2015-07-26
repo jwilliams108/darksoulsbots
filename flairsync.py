@@ -62,8 +62,7 @@ def reddit_login():
 
                 r.set_access_credentials(
                         set(['modflair']), #token_data['scope'],
-                        token_data['access_token']
-                )
+                        token_data['access_token'])
 
             else:
                 sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth attempt'
