@@ -19,11 +19,9 @@ Output verbosity can be changed by altering the debug level to DEBUG from NOTICE
 
 ## What's New
 
-New version now supports syncing across more than two subs - note that currently there is no manual mode, only automatic
-(based on longest flair). This is due to the fact that this script is used across a set of subs that share platinum
-trophy flair - one for each game. Therefore, the longest flair string contains the most trophies and is considered the
-preferred flair.
+New version now supports syncing across more than two subs.
+
+A note about automatic mode - it is based on flair length as this script is used across a set of subs that share platinum trophy flair - one for each game. Therefore, the longest valid flair string contains the most trophies and is considered the preferred flair.
 
 ### TODO
-* (re)add manual mode
 * only login if credentials have expired
