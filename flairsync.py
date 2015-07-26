@@ -199,18 +199,20 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
                     sync_flair = ''
 
                     if operation != 'automatic' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                        print("[{}] [NOTICE] Mismatched flair for User: {}, (m)erged: {}, (s)ource: {}"
+                        print("[{}] [NOTICE] Mismatched flair for User: {}, (m)erged: {}, (s)ource: {}, (c)ustom"
                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, merged_flair, source_flair))
 
                     if operation != 'automatic':
                         # query user to resolve flair mismatch
-                        sync_flair = raw_input('Sync flair from (m/s/n)? ')
+                        sync_flair = raw_input('Sync flair from (m/s/c/n)? ')
                     else:
                         # choose longest flair for merge
                         if len(merged_flair) < len(source_flair):
                             sync_flair = 's'
 
-                    if sync_flair == 's':
+                    if sync_flair == 'c':
+                        merged_flairs[key] = raw_input('Enter a custom flair: ')
+                    elif sync_flair == 's':
                         both_count += 1
                         merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
 
