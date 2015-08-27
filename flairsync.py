@@ -26,34 +26,34 @@ def reddit_login():
 
     while True:
         try:
-            r = Reddit(user_agent = cfg_file.get('flairsync', 'user_agent'))
+            r = Reddit(user_agent=cfg_file.get('flairsync', 'user_agent'))
             r.set_oauth_app_info(
-                    client_id = cfg_file.get('flairsync', 'client_id'),
-                    client_secret = cfg_file.get('flairsync', 'client_secret'),
-                    redirect_uri = 'http://www.example.com/unused/redirect/uri'
-                    'authorize_callback'
+                client_id=cfg_file.get('flairsync', 'client_id'),
+                client_secret=cfg_file.get('flairsync', 'client_secret'),
+                redirect_uri='http://www.example.com/unused/redirect/uri'
+                'authorize_callback'
             )
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 print('[{}] [NOTICE] Logging in as {}...'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('reddit', 'username')))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('reddit', 'username')))
 
             # get OAuth token
             client_auth = requests.auth.HTTPBasicAuth(
-                    cfg_file.get('flairsync', 'client_id'),
-                    cfg_file.get('flairsync', 'client_secret'),
+                cfg_file.get('flairsync', 'client_id'),
+                cfg_file.get('flairsync', 'client_secret'),
             )
             post_data = {
-                    'grant_type': 'password',
-                    'username': cfg_file.get('reddit', 'username'),
-                    'password': cfg_file.get('reddit', 'password')
+                'grant_type': 'password',
+                'username': cfg_file.get('reddit', 'username'),
+                'password': cfg_file.get('reddit', 'password')
             }
-            headers = { 'User-Agent': cfg_file.get('flairsync', 'user_agent') }
+            headers = {'User-Agent': cfg_file.get('flairsync', 'user_agent')}
             response = requests.post(
-                    'https://www.reddit.com/api/v1/access_token',
-                    auth = client_auth,
-                    data = post_data,
-                    headers = headers
+                'https://www.reddit.com/api/v1/access_token',
+                auth=client_auth,
+                data=post_data,
+                headers=headers
             )
 
             if response.status_code == 200:
@@ -61,12 +61,12 @@ def reddit_login():
                 token_data = response.json()
 
                 r.set_access_credentials(
-                        set(['modflair']), #token_data['scope'],
-                        token_data['access_token'])
+                    set(['modflair']),  # token_data['scope'],
+                    token_data['access_token'])
 
             else:
                 sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth attempt'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
+                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
                 sys.exit()
 
             break
@@ -112,7 +112,7 @@ def reddit_retrieve_flairs(sub_names, valid_flairs):
     flairs = {}
 
     print('[{}] Loading flairs...'
-            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     # get flairs
     for sub_name in sub_names:
@@ -124,7 +124,7 @@ def reddit_retrieve_flairs(sub_names, valid_flairs):
             # progress indicator
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 sys.stdout.write('[%s] [NOTICE] Retrieving %i flair(s) from /r/%s...\r' %
-                                (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
+                                 (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
                 sys.stdout.flush()
 
             if flair['flair_css_class'] is not None:
@@ -142,8 +142,8 @@ def reddit_retrieve_flairs(sub_names, valid_flairs):
                         sub_flairs[flair['user']]['flair_text'] = ''
 
                     if debug_level == 'DEBUG':
-                        print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {}' # and flair text: \'{}\''
-                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class'])) #, flair['flair_text']))
+                        print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {}'  # and flair text: \'{}\''
+                              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class']))  # , flair['flair_text']))
 
         if debug_level == 'NOTICE' or debug_level == 'DEBUG':
             sys.stdout.write('\n')
@@ -158,7 +158,7 @@ def reddit_retrieve_flairs(sub_names, valid_flairs):
 def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
     for source_sub in source_subs:
         print('[{}] Merging flairs from /r/{}'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
         # determine new flairs as well as flairs in both merge and source_sub
         source_only_keys = set(source_flairs[source_sub].keys()) - set(merged_flairs.keys())
@@ -171,17 +171,17 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 print('[{}] [NOTICE] {} new valid flair(s) merged from /r/{}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_only_keys), source_sub))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_only_keys), source_sub))
         else:
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 print('[{}] [NOTICE] There are no valid new flairs to merge from /r/{} '
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
         # update flair present in both current source_sub and merged_flairs
         if len(both_keys) > 0:
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 print('[{}] [NOTICE] Checking existing flair(s) from /r/{}...'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
             both_count = 0
 
@@ -200,7 +200,7 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
 
                     if operation != 'automatic':
                         print("[{}] Mismatched flair for User: {}, (m)erged: {}, (s)ource: {}, (c)ustom"
-                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, merged_flair, source_flair))
+                              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), key, merged_flair, source_flair))
 
                         # query user to resolve flair mismatch
                         sync_flair = raw_input('Sync flair from (m/s/c/n)? ')
@@ -218,10 +218,10 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 if both_keys > 0:
                     print('[{}] [NOTICE] {} updated valid flair(s) merged from /r/{}'
-                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
+                          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
                 else:
                     print('[{}] [NOTICE] There are no valid updated flair(s) to merge from /r/{}'
-                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
+                          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
 
         current_sub = source_sub
 
@@ -232,7 +232,7 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
 def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
     for source_sub in source_subs:
         print('[{}] Checking for flairs to sync to /r/{}...'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
         response = []
 
@@ -240,7 +240,8 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
         # as well as flairs present in both sets that do not match
         merge_only_keys = set(merged_flairs.keys()) - set(source_flairs[source_sub].keys())
         both_keys = set.intersection(set(source_flairs[source_sub].keys()), set(merged_flairs.keys()))
-        keys_to_sync = merge_only_keys | set(user for user in both_keys if source_flairs[source_sub][user]['valid_flair'] != merged_flairs[user])
+        keys_to_sync = merge_only_keys | set(user for user in both_keys if source_flairs[
+                                             source_sub][user]['valid_flair'] != merged_flairs[user])
 
         for user in keys_to_sync:
             source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
@@ -249,20 +250,20 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
 
             if debug_level == 'DEBUG':
                 print("[{}] [DEBUG] In /r/{}, syncing flair for User: {}, old: {}, new: {}, other: {}"
-                        .format(
-                            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                            source_sub,
-                            user,
-                            source_flair if source_flair != '' else '(none)',
-                            merged_flair if merged_flair != '' else '(none)',
-                            other_flair if other_flair != '' else '(none)'
-                            )
-                        )
+                      .format(
+                          datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                          source_sub,
+                          user,
+                          source_flair if source_flair != '' else '(none)',
+                          merged_flair if merged_flair != '' else '(none)',
+                          other_flair if other_flair != '' else '(none)'
+                      ))
 
             row = {}
             row['user'] = user
-            row['flair_text'] = source_flairs[source_sub][user]['flair_text'] if user in source_flairs[source_sub] else ''
-            row['flair_css_class'] = ' '.join( [other_flair, merged_flair] ) if other_flair != '' else merged_flair
+            row['flair_text'] = source_flairs[source_sub][user][
+                'flair_text'] if user in source_flairs[source_sub] else ''
+            row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
             response.append(row)
 
         # send response to reddit if there are flairs to sync
@@ -275,7 +276,7 @@ def bulk_set_user_flair(sub_name, response):
     if cfg_file.get('flairsync', 'operation') != 'automatic' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
         for row in response:
             print('[{}] [NOTICE] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
 
     # confirm operation or proceed if automatic
     if cfg_file.get('flairsync', 'operation') != 'automatic':
@@ -283,7 +284,7 @@ def bulk_set_user_flair(sub_name, response):
         sync_flairs = raw_input('(y/n) ')
     else:
         print('[{}] Syncing {} flair(s) to /r/{}'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
         sync_flairs = 'y'
 
     if sync_flairs == 'y':
@@ -294,11 +295,11 @@ def bulk_set_user_flair(sub_name, response):
                 break
             except Exception as e:
                 sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
                 sys.exit()
 
         print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
 
 
 def main():
@@ -327,7 +328,7 @@ def main():
     # main loop at set interval if mode is set to 'continuous'
     while True:
         print('[{}] Starting flair sync...'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
         # login
         reddit_login()
@@ -343,7 +344,7 @@ def main():
 
         if mode == 'continuous':
             print('[{}] Pausing flair sync...'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             time.sleep(loop_time)
         else:
             break
