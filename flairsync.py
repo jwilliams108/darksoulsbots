@@ -26,29 +26,29 @@ def reddit_login():
 
     while True:
         try:
-            r = Reddit(user_agent=cfg_file.get('flairsync', 'user_agent'))
+            r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
             r.set_oauth_app_info(
-                client_id=cfg_file.get('flairsync', 'client_id'),
-                client_secret=cfg_file.get('flairsync', 'client_secret'),
+                client_id=cfg_file.get('auth', 'client_id'),
+                client_secret=cfg_file.get('auth', 'client_secret'),
                 redirect_uri='http://www.example.com/unused/redirect/uri'
                 'authorize_callback'
             )
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 print('[{}] [NOTICE] Logging in as {}...'
-                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('reddit', 'username')))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('auth', 'username')))
 
             # get OAuth token
             client_auth = requests.auth.HTTPBasicAuth(
-                cfg_file.get('flairsync', 'client_id'),
-                cfg_file.get('flairsync', 'client_secret'),
+                cfg_file.get('auth', 'client_id'),
+                cfg_file.get('auth', 'client_secret'),
             )
             post_data = {
                 'grant_type': 'password',
-                'username': cfg_file.get('reddit', 'username'),
-                'password': cfg_file.get('reddit', 'password')
+                'username': cfg_file.get('auth', 'username'),
+                'password': cfg_file.get('auth', 'password')
             }
-            headers = {'User-Agent': cfg_file.get('flairsync', 'user_agent')}
+            headers = {'User-Agent': cfg_file.get('auth', 'user_agent')}
             response = requests.post(
                 'https://www.reddit.com/api/v1/access_token',
                 auth=client_auth,
