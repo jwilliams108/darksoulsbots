@@ -7,10 +7,11 @@
 
 from datetime import datetime
 from praw import Reddit
+from reddit import reddit_auth
+from reddit import reddit_get_all_flair
+from reddit import reddit_get_valid_flair
+from reddit import reddit_set_flair
 import ConfigParser
-import requests
-import requests.auth
-import re
 import sys
 import time
 
@@ -18,140 +19,6 @@ import time
 debug_level = ''
 cfg_file = None
 r = None
-
-
-# login to reddit using OAuth
-def reddit_login():
-    global r
-
-    while True:
-        try:
-            r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
-            r.set_oauth_app_info(
-                client_id=cfg_file.get('auth', 'client_id'),
-                client_secret=cfg_file.get('auth', 'client_secret'),
-                redirect_uri='http://www.example.com/unused/redirect/uri'
-                'authorize_callback'
-            )
-
-            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                print('[{}] [NOTICE] Logging in as {}...'
-                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('auth', 'username')))
-
-            # get OAuth token
-            client_auth = requests.auth.HTTPBasicAuth(
-                cfg_file.get('auth', 'client_id'),
-                cfg_file.get('auth', 'client_secret'),
-            )
-            post_data = {
-                'grant_type': 'password',
-                'username': cfg_file.get('auth', 'username'),
-                'password': cfg_file.get('auth', 'password')
-            }
-            headers = {'User-Agent': cfg_file.get('auth', 'user_agent')}
-            response = requests.post(
-                'https://www.reddit.com/api/v1/access_token',
-                auth=client_auth,
-                data=post_data,
-                headers=headers
-            )
-
-            if response.status_code == 200:
-                # set access credentials using token from reponse
-                token_data = response.json()
-
-                r.set_access_credentials(
-                    set(['modflair']),  # token_data['scope'],
-                    token_data['access_token'])
-
-            else:
-                sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth attempt'
-                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
-                sys.exit()
-
-            break
-        except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-            sys.exit()
-
-
-# validate individual flair
-def get_valid_flair(flair, valid_flairs):
-    valid_flair = ''
-
-    # check that new flairs contain valid flair
-    match = re.search(valid_flairs, flair)
-
-    if match is not None:
-        valid_flair = match.group()
-
-    return valid_flair
-
-
-# if key exists, get other flair (not valid) substring from list
-def get_other_flair(flair, valid_flairs):
-    other_flair = ''
-
-    # check if other non-valid flair is present
-    split_flair = re.split(valid_flairs, flair)
-
-    if len(split_flair) == 1:
-        other_flair = split_flair[0].strip()
-    elif len(split_flair) == 2:
-        # handle if other flair comes before or after split flair
-        if split_flair[0].strip() == '':
-            other_flair = split_flair[1].strip()
-        else:
-            other_flair = split_flair[0].strip()
-
-    return other_flair
-
-
-# retrieve valid flairs from specified subs
-def reddit_retrieve_flairs(sub_names, valid_flairs):
-    flairs = {}
-
-    print('[{}] Loading flairs...'
-          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-
-    # get flairs
-    for sub_name in sub_names:
-        sub = r.get_subreddit(sub_name)
-        flair_list = sub.get_flair_list(limit=None)
-        sub_flairs = {}
-
-        for index, flair in enumerate(flair_list):
-            # progress indicator
-            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                sys.stdout.write('[%s] [NOTICE] Retrieving %i flair(s) from /r/%s...\r' %
-                                 (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
-                sys.stdout.flush()
-
-            if flair['flair_css_class'] is not None:
-                valid_flair = get_valid_flair(flair['flair_css_class'], valid_flairs)
-                other_flair = get_other_flair(flair['flair_css_class'], valid_flairs)
-
-                if valid_flair != '':
-                    sub_flairs[flair['user']] = {}
-                    sub_flairs[flair['user']]['valid_flair'] = valid_flair
-                    sub_flairs[flair['user']]['other_flair'] = other_flair
-
-                    if flair['flair_text'] is not None:
-                        sub_flairs[flair['user']]['flair_text'] = flair['flair_text']
-                    else:
-                        sub_flairs[flair['user']]['flair_text'] = ''
-
-                    if debug_level == 'DEBUG':
-                        print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {}'  # and flair text: \'{}\''
-                              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class']))  # , flair['flair_text']))
-
-        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-            sys.stdout.write('\n')
-            sys.stdout.flush()
-
-        flairs[sub_name] = sub_flairs
-
-    return flairs
 
 
 # merge valid flairs from source_subs
@@ -191,8 +58,8 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
 
                 # only work with the valid flair substring - we know valid flairs are present
                 # but there still may be additional invalid/ignorable flair
-                merged_flair = get_valid_flair(merged_flair, valid_flairs)
-                source_flair = get_valid_flair(source_flair, valid_flairs)
+                merged_flair = reddit_get_valid_flair(merged_flair, valid_flairs)
+                source_flair = reddit_get_valid_flair(source_flair, valid_flairs)
 
                 if merged_flair != source_flair:
                     operation = cfg_file.get('flairsync', 'operation')
@@ -268,43 +135,18 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
 
         # send response to reddit if there are flairs to sync
         if len(response) > 0:
-            bulk_set_user_flair(source_sub, response)
+            if cfg_file.get('flairsync', 'operation') != 'automatic':
+                sync_flairs = 'n'
+            else:
+                sync_flairs = 'y'
 
-
-# perform the flair updates via a bulk set
-def bulk_set_user_flair(sub_name, response):
-    if cfg_file.get('flairsync', 'operation') != 'automatic' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        for row in response:
-            print('[{}] [NOTICE] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
-                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
-
-    # confirm operation or proceed if automatic
-    if cfg_file.get('flairsync', 'operation') != 'automatic':
-        print('Sync {} flair(s) to /r/{}?'.format(len(response), sub_name))
-        sync_flairs = raw_input('(y/n) ')
-    else:
-        print('[{}] Syncing {} flair(s) to /r/{}'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
-        sync_flairs = 'y'
-
-    if sync_flairs == 'y':
-        # execute upload
-        while True:
-            try:
-                r.get_subreddit(sub_name).set_flair_csv(response)
-                break
-            except Exception as e:
-                sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}'
-                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-                sys.exit()
-
-        print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+            reddit_set_flair(r, source_sub, response, sync_flairs, debug_level)
 
 
 def main():
     global cfg_file
     global debug_level
+    global r
 
     source_flairs = {}
     merged_flairs = {}
@@ -331,10 +173,12 @@ def main():
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
         # login
-        reddit_login()
+        r = Reddit(user_agent = cfg_file.get('auth', 'user_agent'))
+
+        reddit_auth(r, set(['modflair']), cfg_file, debug_level)
 
         # retrieve valid flairs from each sub
-        source_flairs = reddit_retrieve_flairs(source_subs, valid_flairs)
+        source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level)
 
         # build list of flairs to merge from source_subs
         merged_flairs = merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs)
