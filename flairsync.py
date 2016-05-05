@@ -90,8 +90,6 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
                     print('[{}] [NOTICE] There are no valid updated flair(s) to merge from /r/{}'
                           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
 
-        current_sub = source_sub
-
     return merged_flairs
 
 
@@ -173,7 +171,7 @@ def main():
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
         # login
-        r = Reddit(user_agent = cfg_file.get('auth', 'user_agent'))
+        r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
 
         reddit_auth(r, set(['modflair']), cfg_file, debug_level)
 

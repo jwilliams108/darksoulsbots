@@ -4,18 +4,19 @@ import requests.auth
 import sys
 import re
 
+
 # login to reddit using OAuth
 def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
     r.set_oauth_app_info(
-        client_id = cfg_file.get('auth', 'client_id'),
-        client_secret = cfg_file.get('auth', 'client_secret'),
-        redirect_uri = 'http://www.example.com/unused/redirect/uri'
+        client_id=cfg_file.get('auth', 'client_id'),
+        client_secret=cfg_file.get('auth', 'client_secret'),
+        redirect_uri='http://www.example.com/unused/redirect/uri'
         'authorize_callback'
     )
 
     if debug_level == 'NOTICE' or debug_level == 'DEBUG':
         print('[{}] [NOTICE] Logging in as {}...'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('auth', 'username')))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('auth', 'username')))
 
     try:
         # get OAuth token
@@ -31,9 +32,9 @@ def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
         headers = {'User-Agent': cfg_file.get('auth', 'user_agent')}
         response = requests.post(
             'https://www.reddit.com/api/v1/access_token',
-            auth = client_auth,
-            data = post_data,
-            headers = headers
+            auth=client_auth,
+            data=post_data,
+            headers=headers
         )
 
         if response.status_code == 200:
@@ -46,7 +47,7 @@ def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
 
         else:
             sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth attempt'
-                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
+                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
             sys.exit()
 
     except Exception as e:
@@ -101,7 +102,7 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
 
         for index, flair in enumerate(flair_list):
             # progress indicator
-            if progress == True and (debug_level == 'NOTICE' or debug_level == 'DEBUG'):
+            if progress is True and (debug_level == 'NOTICE' or debug_level == 'DEBUG'):
                 sys.stdout.write('[%s] [NOTICE] Retrieving %i flair(s) from /r/%s...\r' %
                                  (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
                 sys.stdout.flush()
@@ -124,16 +125,17 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
                         print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {}'  # and flair text: \'{}\''
                               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class']))  # , flair['flair_text']))
 
-        if progress == True and (debug_level == 'NOTICE' or debug_level == 'DEBUG'):
+        if progress is True and (debug_level == 'NOTICE' or debug_level == 'DEBUG'):
             sys.stdout.write('\n')
             sys.stdout.flush()
         elif debug_level == 'NOTICE' or debug_level == 'DEBUG':
             print('[{}] [NOTICE] Retrieved {} flair(s) from /r/{}'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
 
         flairs[sub_name] = sub_flairs
 
     return flairs
+
 
 # perform the flair updates via a bulk set
 def reddit_set_flair(r, sub_name, response, sync_flairs='y', debug_level='NOTICE'):
@@ -157,7 +159,7 @@ def reddit_set_flair(r, sub_name, response, sync_flairs='y', debug_level='NOTICE
             r.get_subreddit(sub_name).set_flair_csv(response)
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}'
-                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
         print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
