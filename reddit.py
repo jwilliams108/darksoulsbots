@@ -87,7 +87,7 @@ def reddit_get_other_flair(flair, valid_flairs):
 
 
 # retrieve valid flairs from specified subs
-def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE'):
+def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progress=False):
     flairs = {}
 
     print('[{}] Loading flairs...'
@@ -101,7 +101,7 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE'):
 
         for index, flair in enumerate(flair_list):
             # progress indicator
-            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+            if progress == True and (debug_level == 'NOTICE' or debug_level == 'DEBUG'):
                 sys.stdout.write('[%s] [NOTICE] Retrieving %i flair(s) from /r/%s...\r' %
                                  (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
                 sys.stdout.flush()
@@ -124,9 +124,12 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE'):
                         print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {}'  # and flair text: \'{}\''
                               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class']))  # , flair['flair_text']))
 
-        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+        if progress == True and (debug_level == 'NOTICE' or debug_level == 'DEBUG'):
             sys.stdout.write('\n')
             sys.stdout.flush()
+        elif debug_level == 'NOTICE' or debug_level == 'DEBUG':
+            print('[{}] [NOTICE] Retrieved {} flair(s) from /r/{}'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), index, sub_name))
 
         flairs[sub_name] = sub_flairs
 
