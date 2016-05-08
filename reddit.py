@@ -6,6 +6,22 @@ import re
 
 
 # login to reddit using OAuth
+def reddit_send_request(auth, post_data, headers):
+    # send and process request
+    response = requests.post(
+        'https://www.reddit.com/api/v1/access_token',
+        auth=auth,
+        data=post_data,
+        headers=headers
+    )
+
+    if response.status_code == 200:
+        # set access credentials using token from reponse
+        return (response.json(), response.status_code)
+
+    return (None, response.status_code)
+
+
 def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
     r.set_oauth_app_info(
         client_id=cfg_file.get('auth', 'client_id'),
@@ -24,30 +40,59 @@ def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
             cfg_file.get('auth', 'client_id'),
             cfg_file.get('auth', 'client_secret'),
         )
+
+        # construct request data
         post_data = {
             'grant_type': 'password',
             'username': cfg_file.get('auth', 'username'),
             'password': cfg_file.get('auth', 'password')
         }
+
         headers = {'User-Agent': cfg_file.get('auth', 'user_agent')}
-        response = requests.post(
-            'https://www.reddit.com/api/v1/access_token',
-            auth=client_auth,
-            data=post_data,
-            headers=headers
-        )
 
-        if response.status_code == 200:
-            # set access credentials using token from reponse
-            token_data = response.json()
+        token_data, status_code = reddit_send_request(client_auth, post_data, headers)
 
+        if status_code == 200:
             r.set_access_credentials(
                 scope,
                 token_data['access_token'])
 
+            return token_data
         else:
             sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth attempt'
-                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response.status_code))
+                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), status_code))
+            sys.exit()
+
+    except Exception as e:
+        sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+        sys.exit()
+
+
+def reddit_refresh_auth(r, scope, refresh_token, cfg_file, debug_level='NOTICE'):
+    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+        print('[{}] [NOTICE] Refreshing token for {}...'
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('auth', 'username')))
+
+    try:
+        # construct request data
+        post_data = {
+            'grant_type': 'refresh_token',
+            'refresh_token': refresh_token
+        }
+
+        headers = {'User-Agent': cfg_file.get('auth', 'user_agent')}
+
+        token_data, status_code = reddit_send_request(client_auth, post_data, headers)
+
+        if status_code == 200:
+            r.set_access_credentials(
+                scope,
+                token_data['access_token'])
+
+            return token_data
+        else:
+            sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth refresh attempt'
+                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), status_code))
             sys.exit()
 
     except Exception as e:
