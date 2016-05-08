@@ -21,6 +21,18 @@ cfg_file = None
 r = None
 
 
+# helper class for tee logging
+class FlushOutput(object):
+    def __init__(self):
+        self.terminal = sys.stdout
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.terminal.flush()
+
+sys.stdout = FlushOutput()
+
+
 # merge valid flairs from source_subs
 def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
     for source_sub in source_subs:
