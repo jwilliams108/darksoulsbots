@@ -74,7 +74,7 @@ def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
                 source_flair = reddit_get_valid_flair(source_flair, valid_flairs)
 
                 if merged_flair != source_flair:
-                    operation = cfg_file.get('flairsync', 'operation')
+                    operation = cfg_file.get('general', 'operation')
                     sync_flair = ''
 
                     if operation != 'automatic':
@@ -145,7 +145,7 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
 
         # send response to reddit if there are flairs to sync
         if len(response) > 0:
-            if cfg_file.get('flairsync', 'operation') != 'automatic':
+            if cfg_file.get('general', 'operation') != 'automatic':
                 sync_flairs = 'n'
             else:
                 sync_flairs = 'y'
@@ -172,10 +172,10 @@ def main():
             sys.exit()
 
     debug_level = cfg_file.get('debug', 'level')
-    mode = cfg_file.get('flairsync', 'mode')
-    loop_time = cfg_file.getint('flairsync', 'loop_time')
-    source_subs = (cfg_file.get('source', 'source_subs')).split(',')
-    valid_flairs = cfg_file.get('flairs', 'valid')
+    mode = cfg_file.get('general', 'mode')
+    loop_time = cfg_file.getint('general', 'loop_time')
+    source_subs = (cfg_file.get('flairsync', 'subreddits')).split(',')
+    valid_flairs = cfg_file.get('flairsync', 'valid_flairs')
 
     # main loop at set interval if mode is set to 'continuous'
     while True:
@@ -186,7 +186,7 @@ def main():
             # login
             r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
 
-            reddit_auth(r, set(['modflair']), cfg_file, debug_level)
+            reddit_auth(r, cfg_file, debug_level)
 
             # retrieve valid flairs from each sub
             source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level)

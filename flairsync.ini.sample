@@ -1,20 +1,17 @@
-[flairsync]
-user_agent    = FlairSync by /u/jwilliams108
-client_id     = {{client_id}}
-client_secret = {{client_secret}}
-mode          = continuous
+[general]
+mode          = single
 loop_time     = 180
 operation     = automatic
 
-[reddit]
-username    = {{username}}
-password    = {{password}}
-
-[source]
-source_subs = {{comma separated list of subnames}}
-
-[flairs]
-valid = {{regex}}
+[auth]
+user_agent    = FlairSync by /u/jwilliams108
+client_id     = {{client_id}}
+client_secret = {{client_secret}}
+refresh_token = {{refresh_token}}
 
 [debug]
 level = NOTICE
+
+[flairsync]
+subreddits   = {{comma separated list of subnames}}
+valid_flairs = {{regex}}

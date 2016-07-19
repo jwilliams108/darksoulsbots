@@ -8,97 +8,20 @@ import re
 ###
 # Authentication Helpers
 ###
-# post request
-def reddit_send_request(auth, post_data, headers):
-    # send and process request
-    response = requests.post(
-        'https://www.reddit.com/api/v1/access_token',
-        auth=auth,
-        data=post_data,
-        headers=headers
-    )
-
-    if response.status_code == 200:
-        # set access credentials using token from reponse
-        return (response.json(), response.status_code)
-
-    return (None, response.status_code)
-
-
-# login to reddit using OAuth
-def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
+#
+# login to reddit using OAuth w/ supplied refresh token
+def reddit_auth(r, cfg_file, debug_level='NOTICE'):
     r.set_oauth_app_info(
         client_id=cfg_file.get('auth', 'client_id'),
         client_secret=cfg_file.get('auth', 'client_secret'),
-        redirect_uri='http://www.example.com/unused/redirect/uri'
-        'authorize_callback'
+        redirect_uri='http://127.0.0.1:9999/authorize_callback'
     )
 
     if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        print('[{}] [NOTICE] Logging in as {}...'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('auth', 'username')))
+        print('[{}] [NOTICE] Refreshing access information...'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     try:
-        # get OAuth token
-        client_auth = requests.auth.HTTPBasicAuth(
-            cfg_file.get('auth', 'client_id'),
-            cfg_file.get('auth', 'client_secret'),
-        )
-
-        # construct request data
-        post_data = {
-            'grant_type': 'password',
-            'username': cfg_file.get('auth', 'username'),
-            'password': cfg_file.get('auth', 'password')
-        }
-
-        headers = {'User-Agent': cfg_file.get('auth', 'user_agent')}
-
-        token_data, status_code = reddit_send_request(client_auth, post_data, headers)
-
-        if status_code == 200:
-            r.set_access_credentials(
-                scope,
-                token_data['access_token'])
-
-            return token_data
-        else:
-            sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth attempt'
-                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), status_code))
-            sys.exit()
-
-    except Exception as e:
-        sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-        sys.exit()
-
-
-# refresh an existing auth token
-def reddit_refresh_auth(r, scope, refresh_token, cfg_file, debug_level='NOTICE'):
-    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        print('[{}] [NOTICE] Refreshing token for {}...'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cfg_file.get('auth', 'username')))
-
-    try:
-        # construct request data
-        post_data = {
-            'grant_type': 'refresh_token',
-            'refresh_token': refresh_token
-        }
-
-        headers = {'User-Agent': cfg_file.get('auth', 'user_agent')}
-
-        token_data, status_code = reddit_send_request(client_auth, post_data, headers)
-
-        if status_code == 200:
-            r.set_access_credentials(
-                scope,
-                token_data['access_token'])
-
-            return token_data
-        else:
-            sys.stderr.write('[{}] [ERROR]: {} Reponse code from OAuth refresh attempt'
-                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), status_code))
-            sys.exit()
+        r.refresh_access_information(cfg_file.get('auth', 'refresh_token'))
 
     except Exception as e:
         sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
@@ -108,7 +31,7 @@ def reddit_refresh_auth(r, scope, refresh_token, cfg_file, debug_level='NOTICE')
 ###
 # Flair Helpers
 ###
-
+#
 # get flairs that match specified condition
 def reddit_get_valid_flair(flair, valid_flairs):
     valid_flair = ''
