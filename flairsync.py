@@ -5,7 +5,6 @@
 #
 # see flairsync.ini to set options
 
-from datetime import datetime
 from praw import Reddit
 from reddit import reddit_auth
 from reddit import reddit_get_all_flair
@@ -14,6 +13,7 @@ from reddit import reddit_set_flair
 import ConfigParser
 import sys
 import time
+from datetime import datetime
 
 # globals
 debug_level = ''
@@ -182,26 +182,29 @@ def main():
         print('[{}] Starting flair sync...'
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
-        # login
-        r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
+        try:
+            # login
+            r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
 
-        reddit_auth(r, set(['modflair']), cfg_file, debug_level)
+            reddit_auth(r, set(['modflair']), cfg_file, debug_level)
 
-        # retrieve valid flairs from each sub
-        source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level)
+            # retrieve valid flairs from each sub
+            source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level)
 
-        # build list of flairs to merge from source_subs
-        merged_flairs = merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs)
+            # build list of flairs to merge from source_subs
+            merged_flairs = merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs)
 
-        # sync merged flairs
-        sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs)
+            # sync merged flairs
+            sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs)
 
-        if mode == 'continuous':
-            print('[{}] Pausing flair sync...'
-                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-            time.sleep(loop_time)
-        else:
-            break
+            if mode == 'continuous':
+                print('[{}] Pausing flair sync...'
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                time.sleep(loop_time)
+            else:
+                break
+        except Exception as e:
+            sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
 
 if __name__ == '__main__':
     main()

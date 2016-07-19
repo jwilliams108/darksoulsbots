@@ -5,7 +5,10 @@ import sys
 import re
 
 
-# login to reddit using OAuth
+###
+# Authentication Helpers
+###
+# post request
 def reddit_send_request(auth, post_data, headers):
     # send and process request
     response = requests.post(
@@ -22,6 +25,7 @@ def reddit_send_request(auth, post_data, headers):
     return (None, response.status_code)
 
 
+# login to reddit using OAuth
 def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
     r.set_oauth_app_info(
         client_id=cfg_file.get('auth', 'client_id'),
@@ -68,6 +72,7 @@ def reddit_auth(r, scope, cfg_file, debug_level='NOTICE'):
         sys.exit()
 
 
+# refresh an existing auth token
 def reddit_refresh_auth(r, scope, refresh_token, cfg_file, debug_level='NOTICE'):
     if debug_level == 'NOTICE' or debug_level == 'DEBUG':
         print('[{}] [NOTICE] Refreshing token for {}...'
@@ -100,7 +105,11 @@ def reddit_refresh_auth(r, scope, refresh_token, cfg_file, debug_level='NOTICE')
         sys.exit()
 
 
-# validate individual flair
+###
+# Flair Helpers
+###
+
+# get flairs that match specified condition
 def reddit_get_valid_flair(flair, valid_flairs):
     valid_flair = ''
 
@@ -113,8 +122,8 @@ def reddit_get_valid_flair(flair, valid_flairs):
     return valid_flair
 
 
-# if key exists, get other flair (not valid) substring from list
-def reddit_get_other_flair(flair, valid_flairs):
+# get flairs other than those that match specified condition
+def reddit_get_additional_flair(flair, valid_flairs):
     other_flair = ''
 
     # check if other non-valid flair is present
@@ -154,7 +163,7 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
 
             if flair['flair_css_class'] is not None:
                 valid_flair = reddit_get_valid_flair(flair['flair_css_class'], valid_flairs)
-                other_flair = reddit_get_other_flair(flair['flair_css_class'], valid_flairs)
+                other_flair = reddit_get_additional_flair(flair['flair_css_class'], valid_flairs)
 
                 if valid_flair != '':
                     sub_flairs[flair['user']] = {}
@@ -182,7 +191,7 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
     return flairs
 
 
-# perform the flair updates via a bulk set
+# perform flair updates via a bulk set
 def reddit_set_flair(r, sub_name, response, sync_flairs='y', debug_level='NOTICE'):
     if sync_flairs == 'n' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
         for row in response:
