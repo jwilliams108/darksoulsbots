@@ -22,6 +22,3 @@ Output verbosity can be changed by altering the debug level to DEBUG from NOTICE
 New version now supports syncing across more than two subs.
 
 A note about automatic mode - it is based on flair length as this script is used across a set of subs that share platinum trophy flair - one for each game. Therefore, the longest valid flair string contains the most trophies and is considered the preferred flair.
-
-### TODO
-* only login if credentials have expired
