@@ -203,6 +203,10 @@ def main():
                 time.sleep(loop_time)
             else:
                 break
+        except KeyboardInterrupt, SystemExit:
+            print('[{}] Stopping flair sync...'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            break
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
 
