@@ -29,6 +29,24 @@ def reddit_auth(r, cfg_file, debug_level='NOTICE'):
 
 
 ###
+# Utilities
+###
+#
+# check if user is a mod
+def reddit_is_mod(name):
+    is_mod = False
+    mods = r.get_moderators(subreddit)
+
+    # check if comment author is a mod
+    for idx in range(0, len(mods)):
+        if mods[idx].name == name:
+            is_mod = True
+            break
+
+    return is_mod
+
+
+###
 # Flair Helpers
 ###
 #
