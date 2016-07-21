@@ -166,5 +166,5 @@ def reddit_set_flair(r, sub_name, response, sync_flairs='y', debug_level='NOTICE
 #
 # reply to comment
 def reddit_reply_to_comment(comment, text=None):
-    if text not None:
+    if text is not None:
         comment.reply(text)
