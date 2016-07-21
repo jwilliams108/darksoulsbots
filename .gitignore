@@ -1,2 +1,3 @@
 *.pyc
-flairsync.ini
+*.ini
+log
