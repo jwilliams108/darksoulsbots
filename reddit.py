@@ -159,3 +159,12 @@ def reddit_set_flair(r, sub_name, response, sync_flairs='y', debug_level='NOTICE
 
         print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+
+###
+# Post helpers
+###
+#
+# reply to comment
+def reddit_reply_to_comment(comment, text=None):
+    if text not None:
+        comment.reply(text)

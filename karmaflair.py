@@ -8,7 +8,9 @@
 from praw import Reddit
 from praw import helpers
 from reddit import reddit_auth
+from reddit import reddit_reply_to_comment
 import ConfigParser
+from string import Template
 import psycopg2
 import sys
 import time
@@ -34,6 +36,12 @@ class FlushOutput(object):
         self.terminal.flush()
 
 # sys.stdout = FlushOutput()
+
+
+def get_reply_text(reply_type, reply_vars):
+    template = open('tmpl/karmaflair/' + reply_type + '.tpl')
+
+    return Template(template.read()).substitute(reply_vars)
 
 
 def set_karma_flair(name):
@@ -63,22 +71,36 @@ def set_karma_flair(name):
 
 def process_comment_command(command, command_type, comment, submission, parent=None):
     if command == 'karma' and command_type == '+' and parent is not None:
+        # dict of vars for template completion
+        reply_vars = {
+            'author': comment.author.name,
+            'parent_author': parent.author.name,
+            'link_author': comment.link_author,
+            'command': command,
+            'command_type': command_type,
+            'link_flair_text': link_flair_text,
+        }
+
         # valid grant karma command, check for additional criteria
         while True:
             # request must have correct link flair
             if submission.link_flair_text != cfg_file.get('karmaflair', 'valid_flair_text'):
+                reply_to_comment(get_reply_text('invalid_link_flair', reply_vars))
                 break
 
             # user granting karma must be the same as the submitter, or the parent must be the submitter
             if comment.author.name != comment.link_author and parent.author.name != comment.link_author:
+                reply_to_comment(get_reply_text('invalid_author', reply_vars))
                 break
 
             # user cannot grant karma to themselves
             if parent.author.name == comment.author.name:
+                reply_to_comment(get_reply_text('award_to_self', reply_vars))
                 break
 
             # cannot grant karma to another command
             if re.match("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()):
+                reply_to_comment(get_reply_text('award_to_command', reply_vars))
                 break
 
             try:
@@ -92,6 +114,8 @@ def process_comment_command(command, command_type, comment, submission, parent=N
                     if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                         print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), parent.author.name, comment.author.name, submission.id))
+
+                    reply_to_comment(get_reply_text('already_awarded', reply_vars))
                 else:
                     sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             else:
@@ -103,6 +127,7 @@ def process_comment_command(command, command_type, comment, submission, parent=N
 
                 # update karma flair
                 set_karma_flair(parent.author.name)
+                reply_to_comment(get_reply_text('successful_award', reply_vars))
 
             break
 
