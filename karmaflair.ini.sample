@@ -1,0 +1,21 @@
+[general]
+mode          = single
+loop_time     = 180
+operation     = automatic
+
+[auth]
+user_agent    = KarmaFlair by /u/jwilliams108
+client_id     = {{client_id}}
+client_secret = {{client_secret}}
+refresh_token = {{refresh_token}}
+
+[debug]
+level = NOTICE
+
+[karmaflair]
+subreddit        = {{subreddit name}}
+valid_commands   = {{regex of valid commands}}
+valid_flair_text = {{required link flair}}
+dbname           = {{db name}}
+dbuser           = {{db user}}
+dbtablename      = {{db table name}}
