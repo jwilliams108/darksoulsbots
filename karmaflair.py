@@ -13,10 +13,9 @@ import ConfigParser
 from string import Template
 import psycopg2
 import sys
+import re
 import time
 from datetime import datetime
-import re
-from pprint import pprint
 
 # globals
 debug_level = ''
