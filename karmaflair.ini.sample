@@ -1,7 +1,6 @@
 [general]
 mode          = single
 loop_time     = 180
-operation     = automatic
 
 [auth]
 user_agent    = KarmaFlair by /u/jwilliams108

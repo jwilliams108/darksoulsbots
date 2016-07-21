@@ -70,7 +70,7 @@ def process_comment_command(command, command_type, comment, submission, parent=N
                 break
 
             # user granting karma must be the same as the submitter, or the parent must be the submitter
-            if comment.author.name != comment.link_author and parent.author.name != comment.link_author :
+            if comment.author.name != comment.link_author and parent.author.name != comment.link_author:
                 break
 
             # user cannot grant karma to themselves
@@ -78,7 +78,7 @@ def process_comment_command(command, command_type, comment, submission, parent=N
                 break
 
             # cannot grant karma to another command
-            if re.match("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip())
+            if re.match("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()):
                 break
 
             try:
