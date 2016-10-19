@@ -43,6 +43,57 @@ def get_reply_text(reply_type, reply_vars):
     return Template(template.read()).substitute(reply_vars)
 
 
+def check_for_reply(submission, name, granter):
+    replied = False
+
+    try:
+        # get their total karma from the db
+        cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND replied=TRUE", (submission.id, name, granter,))
+        result = cur.fetchone()
+
+        if result is not None:
+            replied = True
+    except Exception as e:
+        conn.rollback()
+
+        sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+    else:
+        conn.commit()
+
+        return replied
+
+
+def grant_karma(comment, submission, name, granter, reply_vars):
+    try:
+        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter) VALUES (%s, %s, %s)",
+                (submission.id, name, granter))
+    except psycopg2.IntegrityError as e:
+        conn.rollback()
+
+        if e.pgcode == '23505':
+            # unique key violation, already granted
+            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), parent.author.name, comment.author.name, submission.id))
+
+            if check_for_reply(submission, name, granter):
+                reddit_reply_to_comment(comment, get_reply_text('already_awarded', reply_vars))
+        else:
+            sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+    else:
+        conn.commit()
+
+        print('[{}] Karma successfully granted to {} by {}, for submission {}'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                parent.author.name, comment.author.name, submission.id))
+
+        # reply and update karma flair
+        if check_for_reply(submission, name, granter):
+            reddit_reply_to_comment(comment, get_reply_text('successful_award', reply_vars))
+
+        set_karma_flair(parent.author.name)
+
+
 def set_karma_flair(name):
     try:
         # get their total karma from the db
@@ -98,31 +149,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
                 reddit_reply_to_comment(comment, get_reply_text('award_to_command', reply_vars))
                 break
 
-            try:
-                cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter) VALUES (%s, %s, %s)",
-                        (submission.id, parent.author.name, comment.author.name))
-            except psycopg2.IntegrityError as e:
-                conn.rollback()
-
-                if e.pgcode == '23505':
-                    # unique key violation
-                    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                        print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
-                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), parent.author.name, comment.author.name, submission.id))
-
-                    reddit_reply_to_comment(comment, get_reply_text('already_awarded', reply_vars))
-                else:
-                    sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-            else:
-                conn.commit()
-
-                print('[{}] Karma successfully granted to {} by {}, for submission {}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        parent.author.name, comment.author.name, submission.id))
-
-                # update karma flair
-                set_karma_flair(parent.author.name)
-                reddit_reply_to_comment(comment, get_reply_text('successful_award', reply_vars))
+            grant_karma(comment, submission, parent.author.name, comment.author.name, reply_vars))
 
             break
 

@@ -36,7 +36,8 @@ SET default_with_oids = false;
 CREATE TABLE karma (
     id text NOT NULL,
     name text NOT NULL,
-    granter text NOT NULL
+    granter text NOT NULL,
+    replied boolean DEFAULT false
 );
 
 
