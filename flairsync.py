@@ -168,7 +168,7 @@ def main():
             cfg_file.read('flairsync.ini')
             break
         except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
     debug_level = cfg_file.get('debug', 'level')
@@ -208,7 +208,7 @@ def main():
                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             break
         except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
 
 if __name__ == '__main__':
     main()
