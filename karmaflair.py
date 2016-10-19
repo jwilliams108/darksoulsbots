@@ -149,7 +149,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
                 reddit_reply_to_comment(comment, get_reply_text('award_to_command', reply_vars))
                 break
 
-            grant_karma(comment, submission, parent.author.name, comment.author.name, reply_vars))
+            grant_karma(comment, submission, parent.author.name, comment.author.name, reply_vars)
 
             break
 
