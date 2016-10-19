@@ -133,32 +133,37 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
 
 
 # perform flair updates via a bulk set
-def reddit_set_flair(r, sub_name, response, sync_flairs='y', debug_level='NOTICE'):
+def reddit_set_flair(r, sub_name, flairs, sync_flairs='y', debug_level='NOTICE'):
     if sync_flairs == 'n' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        for row in response:
+        for row in flairs:
             print('[{}] [NOTICE] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
                   .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
 
     # confirm operation or proceed if automatic
     if sync_flairs == 'n':
-        print('Sync {} flair(s) to /r/{}?'.format(len(response), sub_name))
+        print('Sync {} flair(s) to /r/{}?'.format(len(flairs), sub_name))
         sync_flairs = raw_input('(y/n) ')
     else:
         print('[{}] Syncing {} flair(s) to /r/{}'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flairs), sub_name))
         sync_flairs = 'y'
 
     if sync_flairs == 'y':
         # execute upload
         try:
-            r.get_subreddit(sub_name).set_flair_csv(response)
-        except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}'
-                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-            sys.exit()
+            response = r.get_subreddit(sub_name).set_flair_csv(flairs)
 
-        print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
-              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(response), sub_name))
+            if response[0]['ok'] is True:
+                print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flairs), sub_name))
+            else:
+                sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}\n'
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response[0]['status']))
+
+        except Exception as e:
+            sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}\n'
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+
 
 ###
 # Post helpers
