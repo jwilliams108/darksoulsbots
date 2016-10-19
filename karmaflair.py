@@ -59,7 +59,7 @@ def set_karma_flair(name):
     except Exception as e:
         conn.rollback()
 
-        sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+        sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
     else:
         conn.commit()
 
@@ -112,7 +112,7 @@ def process_comment_command(command, command_type, comment, submission, parent=N
 
                     reddit_reply_to_comment(comment, get_reply_text('already_awarded', reply_vars))
                 else:
-                    sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                    sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             else:
                 conn.commit()
 
@@ -141,7 +141,7 @@ def main():
             cfg_file.read('karmaflair.ini')
             break
         except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
     debug_level = cfg_file.get('debug', 'level')
@@ -201,7 +201,12 @@ def main():
             print('[{}] Stopping summon karma...'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             break
         except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+
+            if mode == 'continuous':
+                time.sleep(loop_time)
+            else:
+                break
 
 if __name__ == '__main__':
     main()
