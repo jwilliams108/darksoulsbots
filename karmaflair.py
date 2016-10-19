@@ -53,6 +53,9 @@ def check_for_reply(submission, name, granter):
 
         if result is not None:
             replied = True
+
+            if debug_level == 'DEBUG':
+                print('[{}] [DEBUG] Reply exists for submission {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), submission.id))
     except Exception as e:
         conn.rollback()
 
