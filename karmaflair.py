@@ -74,7 +74,7 @@ def grant_karma(comment, submission, name, granter, reply_vars):
             # unique key violation, already granted
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), parent.author.name, comment.author.name, submission.id))
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
 
             if check_for_reply(submission, name, granter):
                 reddit_reply_to_comment(comment, get_reply_text('already_awarded', reply_vars))
@@ -84,14 +84,13 @@ def grant_karma(comment, submission, name, granter, reply_vars):
         conn.commit()
 
         print('[{}] Karma successfully granted to {} by {}, for submission {}'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                parent.author.name, comment.author.name, submission.id))
+                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
 
         # reply and update karma flair
         if check_for_reply(submission, name, granter):
             reddit_reply_to_comment(comment, get_reply_text('successful_award', reply_vars))
 
-        set_karma_flair(parent.author.name)
+        set_karma_flair(name)
 
 
 def set_karma_flair(name):
