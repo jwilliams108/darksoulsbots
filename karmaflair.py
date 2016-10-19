@@ -157,8 +157,7 @@ def main():
 
         try:
             # connect to db
-            conn = psycopg2.connect('dbname=' + cfg_file.get('karmaflair', 'dbname') + ' user=' +
-                    cfg_file.get('karmaflair', 'dbuser'))
+            conn = psycopg2.connect('dbname=' + cfg_file.get('karmaflair', 'dbname') + ' user=' + cfg_file.get('karmaflair', 'dbuser'))
             cur = conn.cursor()
 
             # login
