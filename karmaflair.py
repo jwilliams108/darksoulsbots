@@ -184,6 +184,10 @@ def main():
                         submission = r.get_info(thing_id=comment.link_id)
                         parent = r.get_info(thing_id=comment.parent_id)
 
+                        if debug_level == 'DEBUG':
+                            print('[{}] [DEBUG] Processing comment command: {}{}'
+                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), command_type, command))
+
                         process_comment_command(command, command_type, valid_commands, comment, submission, parent)
 
             if mode == 'continuous':
