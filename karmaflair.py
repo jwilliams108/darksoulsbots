@@ -34,7 +34,7 @@ class FlushOutput(object):
         self.terminal.write(message)
         self.terminal.flush()
 
-# sys.stdout = FlushOutput()
+sys.stdout = FlushOutput()
 
 
 def get_reply_text(reply_type, reply_vars):
@@ -60,6 +60,7 @@ def check_for_reply(submission, name, granter):
         conn.rollback()
 
         sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+        sys.stderr.flush()
     else:
         conn.commit()
 
@@ -83,6 +84,7 @@ def grant_karma(comment, submission, name, granter, reply_vars):
                 reddit_reply_to_comment(comment, get_reply_text('already_awarded', reply_vars))
         else:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.flush()
     else:
         conn.commit()
 
@@ -113,6 +115,7 @@ def set_karma_flair(name):
         conn.rollback()
 
         sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+        sys.stderr.flush()
     else:
         conn.commit()
 
@@ -171,6 +174,7 @@ def main():
             break
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.flush()
             sys.exit()
 
     debug_level = cfg_file.get('debug', 'level')
@@ -234,6 +238,7 @@ def main():
             break
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.flush()
 
             if mode == 'continuous':
                 time.sleep(loop_time)
