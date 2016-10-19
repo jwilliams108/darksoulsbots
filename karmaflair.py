@@ -68,7 +68,7 @@ def set_karma_flair(name):
                     .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, karma_flair_text))
 
 
-def process_comment_command(command, command_type, comment, submission, parent=None):
+def process_comment_command(command, command_type, valid_commands, comment, submission, parent=None):
     if command == 'karma' and command_type == '+' and parent is not None:
         # dict of vars for template completion
         reply_vars = {
@@ -184,7 +184,7 @@ def main():
                         submission = r.get_info(thing_id=comment.link_id)
                         parent = r.get_info(thing_id=comment.parent_id)
 
-                        process_comment_command(command, command_type, comment, submission, parent)
+                        process_comment_command(command, command_type, valid_commands, comment, submission, parent)
 
             if mode == 'continuous':
                 print('[{}] Pausing karma flair...'
