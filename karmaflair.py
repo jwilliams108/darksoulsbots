@@ -83,14 +83,14 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
                 reddit_reply_to_comment(comment, get_reply_text('invalid_link_flair', reply_vars))
                 break
 
-            # user granting karma must be the same as the submitter, or the parent must be the submitter
-            if comment.author.name != comment.link_author and parent.author.name != comment.link_author:
-                reddit_reply_to_comment(comment, get_reply_text('invalid_author', reply_vars))
-                break
-
             # user cannot grant karma to themselves
             if parent.author.name == comment.author.name:
                 reddit_reply_to_comment(comment, get_reply_text('award_to_self', reply_vars))
+                break
+
+            # user granting karma must be the same as the submitter, or the parent must be the submitter
+            if comment.author.name != comment.link_author and parent.author.name != comment.link_author:
+                reddit_reply_to_comment(comment, get_reply_text('invalid_author', reply_vars))
                 break
 
             # cannot grant karma to another command
