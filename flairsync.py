@@ -210,5 +210,10 @@ def main():
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
 
+            if mode == 'continuous':
+                time.sleep(loop_time)
+            else:
+                break
+
 if __name__ == '__main__':
     main()
