@@ -34,7 +34,9 @@ sys.stdout = FlushOutput()
 
 
 # merge valid flairs from source_subs
-def merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs):
+def merge_flairs(source_subs, source_flairs, valid_flairs):
+    merged_flairs = {}
+
     for source_sub in source_subs:
         print('[{}] Merging flairs from /r/{}'
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
@@ -117,8 +119,7 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
         # as well as flairs present in both sets that do not match
         merge_only_keys = set(merged_flairs.keys()) - set(source_flairs[source_sub].keys())
         both_keys = set.intersection(set(source_flairs[source_sub].keys()), set(merged_flairs.keys()))
-        keys_to_sync = merge_only_keys | set(user for user in both_keys if source_flairs[
-                                             source_sub][user]['valid_flair'] != merged_flairs[user])
+        keys_to_sync = merge_only_keys | set(user for user in both_keys if source_flairs[source_sub][user]['valid_flair'] != merged_flairs[user])
 
         for user in keys_to_sync:
             source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
@@ -191,7 +192,7 @@ def main():
             source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level)
 
             # build list of flairs to merge from source_subs
-            merged_flairs = merge_flairs(merged_flairs, source_subs, source_flairs, valid_flairs)
+            merged_flairs = merge_flairs(source_subs, source_flairs, valid_flairs)
 
             # sync merged flairs
             sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs)
