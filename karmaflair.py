@@ -195,7 +195,7 @@ def main():
             for comment in helpers.comment_stream(r, subreddit, limit=100, verbosity=0):
                 if not comment.is_root:
                     # comment has a parent that isn't the submission, so is a candidate for a command
-                    if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                    if debug_level == 'DEBUG':
                         print('[{}] [NOTICE] Checking comment posted at {} by {}'
                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
 
