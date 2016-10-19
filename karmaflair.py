@@ -196,7 +196,7 @@ def main():
                 if not comment.is_root:
                     # comment has a parent that isn't the submission, so is a candidate for a command
                     if debug_level == 'DEBUG':
-                        print('[{}] [NOTICE] Checking comment posted at {} by {}'
+                        print('[{}] [DEBUG] Checking comment posted at {} by {}'
                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
 
                     # command format is to start with a + or - and be the only text in the comment, whitespace is excluded
