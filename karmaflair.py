@@ -67,7 +67,7 @@ def check_for_reply(submission, name, granter):
         return not replied
 
 
-def set_reply(submission, name, granter):
+def set_replied(submission, name, granter):
     try:
         cur.execute("UPDATE " + cfg_file.get('karmaflair', 'dbtablename') + " SET replied=TRUE WHERE id=%s AND name=%s AND granter=%s",
                 (submission.id, name, granter))
