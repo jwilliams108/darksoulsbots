@@ -11,7 +11,7 @@ from reddit import reddit_auth
 from reddit import reddit_reply_to_comment
 import ConfigParser
 from string import Template
-import psycopg2
+import psycopg2, psycopg2.extras
 import sys
 import re
 import time
@@ -226,6 +226,7 @@ def main():
 
         try:
             # connect to db
+            psycopg2.extras.register_uuid()
             conn = psycopg2.connect('dbname=' + cfg_file.get('karmaflair', 'dbname') + ' user=' + cfg_file.get('karmaflair', 'dbuser'))
             cur = conn.cursor()
 
