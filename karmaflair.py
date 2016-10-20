@@ -67,10 +67,11 @@ def check_for_reply(submission, name, granter):
         return not replied
 
 
-def set_replied(submission, name, granter):
+def set_replied(submission, name, granter, reply_type):
     try:
-        cur.execute("UPDATE " + cfg_file.get('karmaflair', 'dbtablename') + " SET replied=TRUE WHERE id=%s AND name=%s AND granter=%s",
-                (submission.id, name, granter))
+        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, replied)" +
+                " VALUES (%s, %s, %s, %s, TRUE) ON CONFLICT" + cfg_file.get('karmaflair', 'dbtablename') + "_pkey DO UPDATE SET replied=TRUE",
+                (submission.id, name, granter, reply_type))
     except Exception as e:
         conn.rollback()
 
@@ -80,8 +81,8 @@ def set_replied(submission, name, granter):
         conn.commit()
 
         if debug_level == 'DEBUG':
-            print('[{}] [DEBUG] Message reply has been recorded to {} by {}, for submission {}'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
+            print('[{}] [DEBUG] Message reply has been recorded to {} by {}, for submission {} of type {}'
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id, reply_type))
 
 
 def grant_karma(comment, submission, name, granter, reply_vars):
@@ -116,7 +117,7 @@ def grant_karma(comment, submission, name, granter, reply_vars):
                 sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
                 sys.stderr.flush()
             else:
-                set_replied(submission, name, granter)
+                set_replied(submission, name, granter, 'successful_award')
 
         set_karma_flair(name)
 
