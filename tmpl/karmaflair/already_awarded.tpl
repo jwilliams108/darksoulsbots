@@ -1,1 +1,1 @@
-Sorry, /u/$name, but karma has already been awarded to /u/$parent_name for this submission.
+Sorry, /u/$name, but you have already awarded karma to /u/$parent_name for this submission.
