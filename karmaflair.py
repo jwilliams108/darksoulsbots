@@ -71,8 +71,8 @@ def check_for_reply(submission, name, granter, reply_type):
 def set_replied(submission, name, granter, reply_type):
     try:
         cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, replied, session_id)" +
-                " VALUES (%s, %s, %s, %s, TRUE, %s) ON CONFLICT (id, name, granter, type) DO UPDATE SET replied=TRUE, session_id=%s",
-                (submission.id, name, granter, reply_type, session_id, session_id,))
+                " VALUES (%s, %s, %s, %s, TRUE, %s) ON CONFLICT (id, name, granter, type) DO UPDATE SET replied=TRUE",
+                (submission.id, name, granter, reply_type, session_id,))
     except Exception as e:
         conn.rollback()
 
