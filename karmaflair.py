@@ -70,7 +70,7 @@ def check_for_reply(submission, name, granter):
 def set_replied(submission, name, granter, reply_type):
     try:
         cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, replied)" +
-                " VALUES (%s, %s, %s, %s, TRUE) ON CONFLICT" + cfg_file.get('karmaflair', 'dbtablename') + "_pkey DO UPDATE SET replied=TRUE",
+                " VALUES (%s, %s, %s, %s, TRUE) ON CONFLICT (id, name, granter, type) DO UPDATE SET replied=TRUE",
                 (submission.id, name, granter, reply_type))
     except Exception as e:
         conn.rollback()
