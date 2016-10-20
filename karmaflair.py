@@ -274,6 +274,9 @@ def main():
             print('[{}] Stopping summon karma...'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             break
         except Exception as e:
+            cur.close()
+            conn.close()
+
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.stderr.flush()
 
