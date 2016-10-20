@@ -86,8 +86,8 @@ def set_replied(submission, name, granter):
 
 def grant_karma(comment, submission, name, granter, reply_vars):
     try:
-        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter) VALUES (%s, %s, %s)",
-                (submission.id, name, granter))
+        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type) VALUES (%s, %s, %s, 'successful_award')",
+                (submission.id, name, granter,))
     except psycopg2.IntegrityError as e:
         conn.rollback()
 
@@ -124,7 +124,7 @@ def grant_karma(comment, submission, name, granter, reply_vars):
 def set_karma_flair(name):
     try:
         # get their total karma from the db
-        cur.execute("SELECT name, count(*) AS karma FROM karma WHERE name=%s GROUP BY name", (name,))
+        cur.execute("SELECT name, count(*) AS karma FROM karma WHERE name=%s AND type='successful_award' GROUP BY name", (name,))
         result = cur.fetchone()
 
         if result[1]:
