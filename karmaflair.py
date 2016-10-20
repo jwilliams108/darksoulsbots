@@ -64,7 +64,7 @@ def check_for_reply(submission, name, granter):
     else:
         conn.commit()
 
-        return replied
+        return not replied
 
 
 def grant_karma(comment, submission, name, granter, reply_vars):
