@@ -37,7 +37,8 @@ CREATE TABLE karma (
     id text NOT NULL,
     name text NOT NULL,
     granter text NOT NULL,
-    replied boolean DEFAULT false
+    replied boolean DEFAULT false,
+    session_id uuid NOT NULL
 );
 
 

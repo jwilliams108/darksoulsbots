@@ -16,6 +16,7 @@ import sys
 import re
 import time
 from datetime import datetime
+import uuid
 
 # globals
 debug_level = ''
@@ -72,9 +73,9 @@ def check_for_reply(submission, name, granter, reply_type=None):
 
 def set_replied(submission, name, granter, reply_type):
     try:
-        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, replied)" +
-                " VALUES (%s, %s, %s, %s, TRUE) ON CONFLICT (id, name, granter, type) DO UPDATE SET replied=TRUE",
-                (submission.id, name, granter, reply_type))
+        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, replied, session_id)" +
+                " VALUES (%s, %s, %s, %s, TRUE, %s) ON CONFLICT (id, name, granter, type) DO UPDATE SET replied=TRUE, session_id=%s",
+                (submission.id, name, granter, reply_type, session_id, session_id,))
     except Exception as e:
         conn.rollback()
 
@@ -89,12 +90,6 @@ def set_replied(submission, name, granter, reply_type):
 
 
 def handle_reply(comment, submission, name, granter, reply_type, reply_vars):
-    if reply_type == 'already_awarded':
-        # handle this check slightly differently as we may have to recover from
-        # a bot crash/restart and we don't want a bunch of 'already_awarded' replies
-        # to valid previous commands
-        reply_type = None
-
     if check_for_reply(submission, name, granter, reply_type):
         try:
             reddit_reply_to_comment(comment, get_reply_text(reply_type, reply_vars))
@@ -107,8 +102,9 @@ def handle_reply(comment, submission, name, granter, reply_type, reply_vars):
 
 def grant_karma(comment, submission, name, granter, reply_vars):
     try:
-        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type) VALUES (%s, %s, %s, 'successful_award')",
-                (submission.id, name, granter,))
+        cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, session_id)" +
+                " VALUES (%s, %s, %s, 'successful_award', %s)",
+                (submission.id, name, granter, session_id,))
     except psycopg2.IntegrityError as e:
         conn.rollback()
 
@@ -204,6 +200,7 @@ def main():
     global r
     global conn
     global cur
+    global session_id
 
     # read ini and set config
     cfg_file = ConfigParser.RawConfigParser()
@@ -235,6 +232,9 @@ def main():
             # login
             r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
             reddit_auth(r, cfg_file, debug_level)
+
+            # generate session id
+            session_id = uuid.uuid1()
 
             # retrieve comments, stream will go back limit # of comments from start
             for comment in helpers.comment_stream(r, subreddit, limit=100, verbosity=0):
