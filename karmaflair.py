@@ -43,12 +43,12 @@ def get_reply_text(reply_type, reply_vars):
     return Template(template.read()).substitute(reply_vars)
 
 
-def check_for_reply(submission, name, granter):
+def check_for_reply(submission, name, granter, reply_type):
     replied = False
 
     try:
         # get their total karma from the db
-        cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND replied=TRUE", (submission.id, name, granter,))
+        cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND type=%s AND replied=TRUE", (submission.id, name, granter, reply_type,))
         result = cur.fetchone()
 
         if result is not None:
@@ -85,6 +85,17 @@ def set_replied(submission, name, granter, reply_type):
                     .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id, reply_type))
 
 
+def handle_reply(submission, name, granter, reply_type, reply_vars):
+    if check_for_reply(submission, name, granter, reply_type):
+        try:
+            reddit_reply_to_comment(comment, get_reply_text(reply_type, reply_vars))
+        except Exception as e:
+            sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+            sys.stderr.flush()
+        else:
+            set_replied(submission, name, granter, reply_type)
+
+
 def grant_karma(comment, submission, name, granter, reply_vars):
     try:
         cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type) VALUES (%s, %s, %s, 'successful_award')",
@@ -98,8 +109,7 @@ def grant_karma(comment, submission, name, granter, reply_vars):
                 print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
                         .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
 
-            if check_for_reply(submission, name, granter):
-                reddit_reply_to_comment(comment, get_reply_text('already_awarded', reply_vars))
+            handle_reply(submission, name, granter, 'already_awarded', reply_vars)
         else:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.stderr.flush()
@@ -110,15 +120,7 @@ def grant_karma(comment, submission, name, granter, reply_vars):
                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
 
         # reply and update karma flair
-        if check_for_reply(submission, name, granter):
-            try:
-                reddit_reply_to_comment(comment, get_reply_text('successful_award', reply_vars))
-            except Exception as e:
-                sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
-                sys.stderr.flush()
-            else:
-                set_replied(submission, name, granter, 'successful_award')
-
+        handle_reply(submission, name, granter, 'successful_award', reply_vars)
         set_karma_flair(name)
 
 
@@ -160,26 +162,25 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
         while True:
             # request must have correct link flair
             if submission.link_flair_text != cfg_file.get('karmaflair', 'valid_flair_text'):
-                reddit_reply_to_comment(comment, get_reply_text('invalid_link_flair', reply_vars))
+                handle_reply(submission, parent.author.name, comment.author.name, 'invalid_link_flair', reply_vars)
                 break
 
             # user cannot grant karma to themselves
             if parent.author.name == comment.author.name:
-                reddit_reply_to_comment(comment, get_reply_text('award_to_self', reply_vars))
+                handle_reply(submission, parent.author.name, comment.author.name, 'award_to_self', reply_vars)
                 break
 
             # user granting karma must be the same as the submitter, or the parent must be the submitter
             if comment.author.name != comment.link_author and parent.author.name != comment.link_author:
-                reddit_reply_to_comment(comment, get_reply_text('invalid_author', reply_vars))
+                handle_reply(submission, parent.author.name, comment.author.name, 'invalid_author', reply_vars)
                 break
 
             # cannot grant karma to another command
             if re.match("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()):
-                reddit_reply_to_comment(comment, get_reply_text('award_to_command', reply_vars))
+                handle_reply(submission, parent.author.name, comment.author.name, 'award_to_command', reply_vars)
                 break
 
             grant_karma(comment, submission, parent.author.name, comment.author.name, reply_vars)
-
             break
 
 
