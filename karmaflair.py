@@ -106,12 +106,21 @@ def grant_karma(comment, submission, name, granter, reply_vars):
         conn.rollback()
 
         if e.pgcode == '23505':
-            # unique key violation, already granted
-            if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
+            # unique key violation, potentially already granted
+            cur.execute("SELECT session_id FROM karma WHERE id=%s AND name=%s AND granter=%s AND type='successful_award' AND replied=TRUE",
+                    (submission.id, name, granter,))
+            result = cur.fetchone()
 
-            handle_reply(comment, submission, name, granter, 'already_awarded', reply_vars)
+            if result is not None and result[0] == session_id:
+                # karma has already been awarded this session, reply to this attempt
+                if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                    print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
+                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
+
+                handle_reply(comment, submission, name, granter, 'already_awarded', reply_vars)
+            else:
+                if debug_level == 'DEBUG':
+                    print('[{}] [DEBUG] Reply exists for submission {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), submission.id))
         else:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.stderr.flush()
