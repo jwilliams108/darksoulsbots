@@ -24,6 +24,7 @@ cfg_file = None
 r = None
 conn = None
 cur = None
+session_id = None
 
 
 # helper class for tee logging
@@ -81,8 +82,8 @@ def set_replied(submission, name, granter, reply_type):
     else:
         conn.commit()
 
-        if debug_level == 'DEBUG':
-            print('[{}] [DEBUG] Message reply has been recorded to {} by {}, for submission {} of type {}'
+        if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+            print('[{}] [NOTICE] Message reply has been recorded to {} by {}, for submission {} of type {}'
                     .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id, reply_type))
 
 
@@ -141,7 +142,7 @@ def set_karma_flair(name):
         cur.execute("SELECT name, count(*) AS karma FROM karma WHERE name=%s AND type='successful_award' GROUP BY name", (name,))
         result = cur.fetchone()
 
-        if result[1]:
+        if result is not None and result[1]:
             # grab their existing flair info
             subreddit = cfg_file.get('karmaflair', 'subreddit')
             current_flair = r.get_flair(subreddit, name)
