@@ -14,7 +14,8 @@ level = NOTICE
 [karmaflair]
 subreddit        = {{subreddit name}}
 valid_commands   = {{regex of valid commands}}
-valid_flair_text = {{required link flair}}
+valid_link_flair = {{valid link flair}}
+valid_root_flair = {{valid root link flair}}
 dbname           = {{db name}}
 dbuser           = {{db user}}
 dbtablename      = {{db table name}}

@@ -170,8 +170,13 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
         # valid grant karma command, check for additional criteria
         while True:
             # request must have correct link flair
-            if submission.link_flair_text != cfg_file.get('karmaflair', 'valid_flair_text'):
+            if submission.link_flair_text != cfg_file.get('karmaflair', 'valid_link_flair'):
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_link_flair', reply_vars)
+                break
+
+            # command must be a reply to a comment, unless excepted
+            if comment.is_root and submission.link_flair_text != cfg_file.get('karmaflair', 'valid_root_flair'):
+                handle_reply(comment, submission, parent.author.name, comment.author.name, 'top_level', reply_vars)
                 break
 
             # user cannot grant karma to themselves
@@ -233,28 +238,26 @@ def main():
 
             # retrieve comments, stream will go back limit # of comments from start
             for comment in helpers.comment_stream(r, subreddit, limit=100, verbosity=0):
-                if not comment.is_root:
-                    # comment has a parent that isn't the submission, so is a candidate for a command
+                if debug_level == 'DEBUG':
+                    print('[{}] [DEBUG] Checking comment posted at {} by {}'
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
+
+                # command format is to start with a + or - and be the only text in the comment, whitespace is excluded
+                match = re.match("^([\+|-])(" + valid_commands + ")$", comment.body.lower().strip())
+
+                if match is not None and match.group(2):
+                    # comment contains a valid command
+                    command = match.group(2)
+                    command_type = match.group(1)
+
+                    submission = r.get_info(thing_id=comment.link_id)
+                    parent = r.get_info(thing_id=comment.parent_id)
+
                     if debug_level == 'DEBUG':
-                        print('[{}] [DEBUG] Checking comment posted at {} by {}'
-                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
+                        print('[{}] [DEBUG] Processing comment command: {}{}'
+                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), command_type, command))
 
-                    # command format is to start with a + or - and be the only text in the comment, whitespace is excluded
-                    match = re.match("^([\+|-])(" + valid_commands + ")$", comment.body.lower().strip())
-
-                    if match is not None and match.group(2):
-                        # comment is both a sub comment and contains a valid command
-                        command = match.group(2)
-                        command_type = match.group(1)
-
-                        submission = r.get_info(thing_id=comment.link_id)
-                        parent = r.get_info(thing_id=comment.parent_id)
-
-                        if debug_level == 'DEBUG':
-                            print('[{}] [DEBUG] Processing comment command: {}{}'
-                                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), command_type, command))
-
-                        process_comment_command(command, command_type, valid_commands, comment, submission, parent)
+                    process_comment_command(command, command_type, valid_commands, comment, submission, parent)
 
             if mode == 'continuous':
                 print('[{}] Pausing karma flair...'
