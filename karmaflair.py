@@ -184,14 +184,14 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'award_to_self', reply_vars)
                 break
 
-            # user granting karma must be the same as the submitter, or the parent must be the submitter
-            if comment.author.name != comment.link_author and parent.author.name != comment.link_author:
-                handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_author', reply_vars)
-                break
-
             # cannot grant karma to another command
             if re.match("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()):
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'award_to_command', reply_vars)
+                break
+
+            # user granting karma must be the same as the submitter, or the parent must be the submitter
+            if comment.author.name != comment.link_author and parent.author.name != comment.link_author:
+                handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_author', reply_vars)
                 break
 
             grant_karma(comment, submission, parent.author.name, comment.author.name, reply_vars)
