@@ -67,6 +67,23 @@ def check_for_reply(submission, name, granter):
         return not replied
 
 
+def set_reply(submission, name, granter):
+    try:
+        cur.execute("UPDATE " + cfg_file.get('karmaflair', 'dbtablename') + " SET replied=TRUE WHERE id=%s AND name=%s AND granter=%s",
+                (submission.id, name, granter))
+    except Exception as e:
+        conn.rollback()
+
+        sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+        sys.stderr.flush()
+    else:
+        conn.commit()
+
+        if debug_level == 'DEBUG':
+            print('[{}] [DEBUG] Message reply has been recorded to {} by {}, for submission {}'
+                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
+
+
 def grant_karma(comment, submission, name, granter, reply_vars):
     try:
         cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter) VALUES (%s, %s, %s)",
@@ -93,7 +110,13 @@ def grant_karma(comment, submission, name, granter, reply_vars):
 
         # reply and update karma flair
         if check_for_reply(submission, name, granter):
-            reddit_reply_to_comment(comment, get_reply_text('successful_award', reply_vars))
+            try:
+                reddit_reply_to_comment(comment, get_reply_text('successful_award', reply_vars))
+            except Exception as e:
+                sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                sys.stderr.flush()
+            else:
+                set_replied(submission, name, granter)
 
         set_karma_flair(name)
 
