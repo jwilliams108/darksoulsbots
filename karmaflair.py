@@ -44,15 +44,12 @@ def get_reply_text(reply_type, reply_vars):
     return Template(template.read()).substitute(reply_vars)
 
 
-def check_for_reply(submission, name, granter, reply_type=None):
+def check_for_reply(submission, name, granter, reply_type):
     replied = False
 
     try:
-        if reply_type is not None:
-            cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND type=%s AND replied=TRUE", (submission.id, name, granter, reply_type,))
-        else:
-            cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND replied=TRUE", (submission.id, name, granter,))
-
+        cur.execute("SELECT session_id FROM karma WHERE id=%s AND name=%s AND granter=%s AND type=%s AND replied=TRUE",
+                (submission.id, name, granter, reply_type,))
         result = cur.fetchone()
 
         if result is not None:
