@@ -43,12 +43,15 @@ def get_reply_text(reply_type, reply_vars):
     return Template(template.read()).substitute(reply_vars)
 
 
-def check_for_reply(submission, name, granter, reply_type):
+def check_for_reply(submission, name, granter, reply_type=None):
     replied = False
 
     try:
-        # get their total karma from the db
-        cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND type=%s AND replied=TRUE", (submission.id, name, granter, reply_type,))
+        if reply_type is not None:
+            cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND type=%s AND replied=TRUE", (submission.id, name, granter, reply_type,))
+        else:
+            cur.execute("SELECT replied FROM karma WHERE id=%s AND name=%s AND granter=%s AND replied=TRUE", (submission.id, name, granter,))
+
         result = cur.fetchone()
 
         if result is not None:
@@ -86,6 +89,12 @@ def set_replied(submission, name, granter, reply_type):
 
 
 def handle_reply(comment, submission, name, granter, reply_type, reply_vars):
+    if reply_type == 'already_awarded':
+        # handle this check slightly differently as we may have to recover from
+        # a bot crash/restart and we don't want a bunch of 'already_awarded' replies
+        # to valid previous commands
+        reply_type = None
+
     if check_for_reply(submission, name, granter, reply_type):
         try:
             reddit_reply_to_comment(comment, get_reply_text(reply_type, reply_vars))
