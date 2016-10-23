@@ -173,12 +173,12 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
         # valid grant karma command, check for additional criteria
         while True:
             # request must have correct link flair
-            if submission.link_flair_text != cfg_file.get('karmaflair', 'valid_link_flair'):
+            if re.match(cfg_file.get('karmaflair', 'valid_link_flair'), submission.link_flair_text) is None:
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_link_flair', reply_vars)
                 break
 
             # command must be a reply to a comment, unless excepted
-            if comment.is_root and submission.link_flair_text != cfg_file.get('karmaflair', 'valid_root_flair'):
+            if comment.is_root and re.match(cfg_file.get('karmaflair', 'valid_root_flair'), submission.link_flair_text) is None:
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'top_level', reply_vars)
                 break
 
@@ -188,7 +188,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
                 break
 
             # cannot grant karma to another command
-            if re.match("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()):
+            if re.search("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()) is not None:
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'award_to_command', reply_vars)
                 break
 
