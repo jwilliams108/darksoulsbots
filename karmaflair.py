@@ -177,6 +177,11 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
             #     handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_link_flair', reply_vars)
             #     break
 
+            # do not grant karma to a deleted submission or comment
+            if parent.author is None:
+                handle_reply(comment, submission, None, comment.author.name, 'invalid_parent_author', reply_vars)
+                break
+
             # command must be a reply to a comment, unless excepted
             if comment.is_root and re.match(cfg_file.get('karmaflair', 'valid_root_flair'), submission.link_flair_text) is None:
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'top_level', reply_vars)
