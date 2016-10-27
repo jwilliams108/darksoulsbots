@@ -173,9 +173,9 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
         # valid grant karma command, check for additional criteria
         while True:
             # request must have correct link flair
-            if re.match(cfg_file.get('karmaflair', 'valid_link_flair'), submission.link_flair_text) is None:
-                handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_link_flair', reply_vars)
-                break
+            # if re.match(cfg_file.get('karmaflair', 'valid_link_flair'), submission.link_flair_text) is None:
+            #     handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_link_flair', reply_vars)
+            #     break
 
             # command must be a reply to a comment, unless excepted
             if comment.is_root and re.match(cfg_file.get('karmaflair', 'valid_root_flair'), submission.link_flair_text) is None:
