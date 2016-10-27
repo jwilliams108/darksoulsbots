@@ -178,7 +178,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
             #     break
 
             # do not grant karma to a deleted submission or comment
-            if parent.author is None:
+            if submission.author is None or parent.author is None:
                 handle_reply(comment, submission, '[deleted]', comment.author.name, 'invalid_parent_author', reply_vars)
                 break
 
