@@ -167,7 +167,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
         # dict of vars for template completion
         reply_vars = {
             'name': comment.author.name,
-            'parent_name': parent.author.name,
+            'parent_name': parent.author.name if parent.author is not None else None,
         }
 
         # valid grant karma command, check for additional criteria
@@ -179,7 +179,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
 
             # do not grant karma to a deleted submission or comment
             if parent.author is None:
-                handle_reply(comment, submission, None, comment.author.name, 'invalid_parent_author', reply_vars)
+                handle_reply(comment, submission, '[deleted]', comment.author.name, 'invalid_parent_author', reply_vars)
                 break
 
             # command must be a reply to a comment, unless excepted
