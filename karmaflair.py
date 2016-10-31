@@ -255,8 +255,8 @@ def main():
                     print('[{}] [DEBUG] Checking comment posted at {} by {}'
                         .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
 
-                # command format is to start with a + or - and be the only text in the comment, whitespace is excluded
-                match = re.match("^([\+|-])(" + valid_commands + ")$", comment.body.lower().strip())
+                # command format is to start with a + or -
+                match = re.match("^([\+|-])(" + valid_commands + ")", comment.body.lower().strip())
 
                 if match is not None and match.group(2):
                     # comment contains a valid command
