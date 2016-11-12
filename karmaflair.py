@@ -194,7 +194,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
                 break
 
             # cannot grant karma to another command
-            if re.search("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()) is not None:
+            if not comment.is_root and re.search("^([\+|-])(" + valid_commands + ")$", parent.body.lower().strip()) is not None:
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'award_to_command', reply_vars)
                 break
 
