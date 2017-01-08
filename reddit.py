@@ -3,6 +3,7 @@ import requests
 import requests.auth
 import sys
 import re
+from praw import Reddit
 
 
 ###
@@ -10,22 +11,22 @@ import re
 ###
 #
 # login to reddit using OAuth w/ supplied refresh token
-def reddit_auth(r, cfg_file, debug_level='NOTICE'):
-    r.set_oauth_app_info(
-        client_id=cfg_file.get('auth', 'client_id'),
-        client_secret=cfg_file.get('auth', 'client_secret'),
-        redirect_uri='http://127.0.0.1:9999/authorize_callback'
-    )
+def reddit_login(cfg_file, debug_level='NOTICE'):
 
     if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        print('[{}] [NOTICE] Refreshing access information...'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        print('[{}] [NOTICE] Logging in to Reddit...'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     try:
-        r.refresh_access_information(cfg_file.get('auth', 'refresh_token'))
+        r = Reddit(client_id=cfg_file.get('auth', 'client_id'),
+                   client_secret=cfg_file.get('auth', 'client_secret'),
+                   refresh_token=cfg_file.get('auth', 'refresh_token'),
+                   user_agent=cfg_file.get('auth', 'user_agent'))
 
     except Exception as e:
         sys.stderr.write('[{}] [ERROR]: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
         sys.exit()
+
+    return r
 
 
 ###

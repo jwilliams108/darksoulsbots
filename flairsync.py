@@ -5,8 +5,7 @@
 #
 # see flairsync.ini to set options
 
-from praw import Reddit
-from reddit import reddit_auth
+from reddit import reddit_login
 from reddit import reddit_get_all_flair
 from reddit import reddit_get_valid_flair
 from reddit import reddit_set_flair
@@ -184,9 +183,7 @@ def main():
 
         try:
             # login
-            r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
-
-            reddit_auth(r, cfg_file, debug_level)
+            r = reddit_login(cfg_file, debug_level)
 
             # retrieve valid flairs from each sub
             source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level)
