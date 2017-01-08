@@ -92,8 +92,7 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
 
     # get flairs
     for sub_name in sub_names:
-        sub = r.get_subreddit(sub_name)
-        flair_list = sub.get_flair_list(limit=None)
+        flair_list = r.subreddit(sub_name).flair()
         sub_flairs = {}
 
         for index, flair in enumerate(flair_list):
@@ -152,7 +151,7 @@ def reddit_set_flair(r, sub_name, flairs, sync_flairs='y', debug_level='NOTICE')
     if sync_flairs == 'y':
         # execute upload
         try:
-            response = r.get_subreddit(sub_name).set_flair_csv(flairs)
+            response = r.subreddit(sub_name).flair.update(flairs)
 
             if response[0]['ok'] is True:
                 print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
