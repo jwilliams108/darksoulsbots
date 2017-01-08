@@ -138,7 +138,7 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
 
             row = {}
             row['user'] = user
-            row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"' if user in source_flairs[source_sub] else ''
+            row['flair_text'] = source_flairs[source_sub][user]['flair_text'] if user in source_flairs[source_sub] else ''
             row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
             response.append(row)
 
