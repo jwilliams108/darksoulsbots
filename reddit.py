@@ -132,12 +132,12 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
     return flairs
 
 
-# perform flair updates via a bulk set
+# set flairs via update
 def reddit_set_flair(r, sub_name, flairs, sync_flairs='y', debug_level='NOTICE'):
     if sync_flairs == 'n' or debug_level == 'NOTICE' or debug_level == 'DEBUG':
-        for row in flairs:
+        for flair in flairs:
             print('[{}] [NOTICE] In /r/{}, setting flair for User: {}, flair: {}, flair_text: {}'
-                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, row['user'], row['flair_css_class'], row['flair_text'].encode('utf-8')))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, flair['user'], flair['flair_css_class'], flair['flair_text'].encode('utf-8')))
 
     # confirm operation or proceed if automatic
     if sync_flairs == 'n':
@@ -149,19 +149,18 @@ def reddit_set_flair(r, sub_name, flairs, sync_flairs='y', debug_level='NOTICE')
         sync_flairs = 'y'
 
     if sync_flairs == 'y':
-        # execute upload
         try:
             response = r.subreddit(sub_name).flair.update(flairs)
 
             if response[0]['ok'] is True:
-                print('[{}] Bulk setting {} flair(s) to /r/{} successful!'
+                print('[{}] Updating {} flair(s) to /r/{} successful!'
                     .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flairs), sub_name))
             else:
-                sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}\n'
+                sys.stderr.write('[{}] [ERROR]: Error updating flair: {}\n'
                     .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response[0]['status']))
 
         except Exception as e:
-            sys.stderr.write('[{}] [ERROR]: Error bulk setting flair: {}\n'
+            sys.stderr.write('[{}] [ERROR]: Error updating flair: {}\n'
                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
 
 
