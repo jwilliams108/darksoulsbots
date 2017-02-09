@@ -107,7 +107,7 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
 
 
 # sync merged_flairs to source_subs
-def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
+def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, kill_list=None):
     for source_sub in source_subs:
         print('[{}] Checking for flairs to sync to /r/{}...'
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
@@ -138,8 +138,14 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs):
 
             row = {}
             row['user'] = user
-            row['flair_text'] = source_flairs[source_sub][user]['flair_text'] if user in source_flairs[source_sub] else ''
-            row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
+
+            # don't set flair for any user in the kill list
+            if kill_list is not None and user in kill_list:
+                row['flair_css_class'] = ''
+            else:
+                row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
+
+            row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"' if user in source_flairs[source_sub] else ''
             response.append(row)
 
         # send response to reddit if there are flairs to sync
@@ -170,11 +176,21 @@ def main():
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.exit()
 
+    # required config options
     debug_level = cfg_file.get('debug', 'level')
     mode = cfg_file.get('general', 'mode')
     loop_time = cfg_file.getint('general', 'loop_time')
     source_subs = (cfg_file.get('flairsync', 'subreddits')).split(',')
     valid_flairs = cfg_file.get('flairsync', 'valid_flairs')
+
+    # optional config options
+    try:
+        kill_list = cfg_file.get('flairsync', 'kill_list')
+    except NoOptionError:
+        kill_list = None
+
+    if kill_list is not None:
+        kill_list = kill_list.split(',')
 
     # main loop at set interval if mode is set to 'continuous'
     while True:
@@ -192,7 +208,7 @@ def main():
             merged_flairs = merge_flairs(source_subs, source_flairs, valid_flairs)
 
             # sync merged flairs
-            sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs)
+            sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, kill_list)
 
             if mode == 'continuous':
                 print('[{}] Pausing flair sync...'
