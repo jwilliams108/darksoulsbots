@@ -108,7 +108,7 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
 
 
 # sync merged_flairs to source_subs
-def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, kill_list=None):
+def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_list=None, kill_list=None):
     for source_sub in source_subs:
         print('[{}] Checking for flairs to sync to /r/{}...'
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
@@ -122,32 +122,34 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, kill_li
         keys_to_sync = merge_only_keys | set(user for user in both_keys if source_flairs[source_sub][user]['valid_flair'] != merged_flairs[user])
 
         for user in keys_to_sync:
-            source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
-            other_flair = source_flairs[source_sub][user]['other_flair'] if user in source_flairs[source_sub] else ''
-            merged_flair = merged_flairs[user]
+            # don't set flair for any user in the ignore list
+            if ignore_list is not None and user not in ignore_list:
+                source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
+                other_flair = source_flairs[source_sub][user]['other_flair'] if user in source_flairs[source_sub] else ''
+                merged_flair = merged_flairs[user]
 
-            if debug_level == 'DEBUG':
-                print("[{}] [DEBUG] In /r/{}, syncing flair for User: {}, old: {}, new: {}, other: {}"
-                      .format(
-                          datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                          source_sub,
-                          user,
-                          source_flair if source_flair != '' else '(none)',
-                          merged_flair if merged_flair != '' else '(none)',
-                          other_flair if other_flair != '' else '(none)'
-                      ))
+                if debug_level == 'DEBUG':
+                    print("[{}] [DEBUG] In /r/{}, syncing flair for User: {}, old: {}, new: {}, other: {}"
+                        .format(
+                            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            source_sub,
+                            user,
+                            source_flair if source_flair != '' else '(none)',
+                            merged_flair if merged_flair != '' else '(none)',
+                            other_flair if other_flair != '' else '(none)'
+                        ))
 
-            row = {}
-            row['user'] = user
+                row = {}
+                row['user'] = user
 
-            # don't set flair for any user in the kill list
-            if kill_list is not None and user in kill_list:
-                row['flair_css_class'] = ''
-            else:
-                row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
+                # set flair to empty for any user in the kill list
+                if kill_list is not None and user in kill_list:
+                    row['flair_css_class'] = ''
+                else:
+                    row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
 
-            row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"' if user in source_flairs[source_sub] else ''
-            response.append(row)
+                row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"' if user in source_flairs[source_sub] else ''
+                response.append(row)
 
         # send response to reddit if there are flairs to sync
         if len(response) > 0:
@@ -186,9 +188,17 @@ def main():
 
     # optional config options
     try:
+        ignore_list = cfg_file.get('flairsync', 'ignore_list')
+    except NoOptionError:
+        ignore_list = None
+
+    try:
         kill_list = cfg_file.get('flairsync', 'kill_list')
     except ConfigParser.NoOptionError:
         kill_list = None
+
+    if ignore_list is not None:
+        ignore_list = ignore_list.split(',')
 
     if kill_list is not None:
         kill_list = kill_list.split(',')
