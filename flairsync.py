@@ -97,7 +97,7 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
                         merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                if both_keys > 0:
+                if len(both_keys) > 0:
                     print('[{}] [NOTICE] {} updated valid flair(s) merged from /r/{}'
                           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
                 else:
