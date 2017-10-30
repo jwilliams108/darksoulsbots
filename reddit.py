@@ -1,6 +1,4 @@
 from datetime import datetime
-import requests
-import requests.auth
 import sys
 import re
 from praw import Reddit
