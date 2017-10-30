@@ -186,7 +186,7 @@ def main():
     # optional config options
     try:
         kill_list = cfg_file.get('flairsync', 'kill_list')
-    except NoOptionError:
+    except ConfigParser.NoOptionError:
         kill_list = None
 
     if kill_list is not None:
