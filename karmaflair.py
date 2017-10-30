@@ -11,7 +11,8 @@ from reddit import reddit_auth
 from reddit import reddit_reply_to_comment
 import ConfigParser
 from string import Template
-import psycopg2, psycopg2.extras
+import psycopg2
+import psycopg2.extras
 import sys
 import re
 import time
@@ -50,7 +51,7 @@ def check_for_reply(submission, name, granter, reply_type):
 
     try:
         cur.execute("SELECT session_id FROM karma WHERE id=%s AND name=%s AND granter=%s AND type=%s AND replied=TRUE",
-                (submission.id, name, granter, reply_type,))
+                    (submission.id, name, granter, reply_type,))
         result = cur.fetchone()
 
         if result is not None:
@@ -72,8 +73,8 @@ def check_for_reply(submission, name, granter, reply_type):
 def set_replied(submission, name, granter, reply_type):
     try:
         cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, replied, session_id)" +
-                " VALUES (%s, %s, %s, %s, TRUE, %s) ON CONFLICT (id, name, granter, type) DO UPDATE SET replied=TRUE",
-                (submission.id, name, granter, reply_type, session_id,))
+                    " VALUES (%s, %s, %s, %s, TRUE, %s) ON CONFLICT (id, name, granter, type) DO UPDATE SET replied=TRUE",
+                    (submission.id, name, granter, reply_type, session_id,))
     except Exception as e:
         conn.rollback()
 
@@ -84,7 +85,7 @@ def set_replied(submission, name, granter, reply_type):
 
         if debug_level == 'NOTICE' or debug_level == 'DEBUG':
             print('[{}] [NOTICE] Message reply has been recorded to {} by {}, for submission {} of type {}'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id, reply_type))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id, reply_type))
 
 
 def handle_reply(comment, submission, name, granter, reply_type, reply_vars):
@@ -101,22 +102,22 @@ def handle_reply(comment, submission, name, granter, reply_type, reply_vars):
 def grant_karma(comment, submission, name, granter, reply_vars):
     try:
         cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, session_id)" +
-                " VALUES (%s, %s, %s, 'successful_award', %s)",
-                (submission.id, name, granter, session_id,))
+                    " VALUES (%s, %s, %s, 'successful_award', %s)",
+                    (submission.id, name, granter, session_id,))
     except psycopg2.IntegrityError as e:
         conn.rollback()
 
         if e.pgcode == '23505':
             # unique key violation, potentially already granted
             cur.execute("SELECT session_id FROM karma WHERE id=%s AND name=%s AND granter=%s AND type='successful_award' AND replied=TRUE",
-                    (submission.id, name, granter,))
+                        (submission.id, name, granter,))
             result = cur.fetchone()
 
             if result is not None and result[0] == session_id:
                 # karma has already been awarded this session, reply to this attempt
                 if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                     print('[{}] [NOTICE] Karma has already been granted to {} by {}, for submission {}'
-                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
+                          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
 
                 handle_reply(comment, submission, name, granter, 'already_awarded', reply_vars)
             else:
@@ -129,7 +130,7 @@ def grant_karma(comment, submission, name, granter, reply_vars):
         conn.commit()
 
         print('[{}] Karma successfully granted to {} by {}, for submission {}'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
+              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id))
 
         # reply and update karma flair
         handle_reply(comment, submission, name, granter, 'successful_award', reply_vars)
@@ -159,7 +160,7 @@ def set_karma_flair(name):
 
         if debug_level == 'NOTICE' or debug_level == 'DEBUG':
             print('[{}] [NOTICE] Karma flair successfully updated for {} to {}'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, karma_flair_text))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, karma_flair_text))
 
 
 def process_comment_command(command, command_type, valid_commands, comment, submission, parent=None):
@@ -254,7 +255,7 @@ def main():
             for comment in helpers.comment_stream(r, subreddit, limit=100, verbosity=0):
                 if debug_level == 'DEBUG':
                     print('[{}] [DEBUG] Checking comment posted at {} by {}'
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
+                          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
 
                 # command format is to start with a + or -
                 match = re.match("^([\+|-])(" + valid_commands + ")", comment.body.lower().strip())
@@ -269,13 +270,13 @@ def main():
 
                     if debug_level == 'DEBUG':
                         print('[{}] [DEBUG] Processing comment command: {}{}'
-                            .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), command_type, command))
+                              .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), command_type, command))
 
                     process_comment_command(command, command_type, valid_commands, comment, submission, parent)
 
             if mode == 'continuous':
                 print('[{}] Pausing karma flair...'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                 time.sleep(loop_time)
             else:
                 cur.close()
