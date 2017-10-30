@@ -134,14 +134,14 @@ def reddit_set_flair(r, sub_name, flairs, sync_flairs='y', debug_level='NOTICE')
 
             if response[0]['ok'] is True:
                 print('[{}] Updating {} flair(s) to /r/{} successful!'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flairs), sub_name))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(flairs), sub_name))
             else:
                 sys.stderr.write('[{}] [ERROR]: Error updating flair: {}\n'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response[0]['status']))
+                                 .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), response[0]['status']))
 
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: Error updating flair: {}\n'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
+                             .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
 
 
 ###

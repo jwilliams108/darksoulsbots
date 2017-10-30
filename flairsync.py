@@ -212,13 +212,13 @@ def main():
 
             if mode == 'continuous':
                 print('[{}] Pausing flair sync...'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                 time.sleep(loop_time)
             else:
                 break
         except KeyboardInterrupt, SystemExit:
             print('[{}] Stopping flair sync...'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             break
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
