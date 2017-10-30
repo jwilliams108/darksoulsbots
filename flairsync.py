@@ -130,14 +130,14 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_
 
                 if debug_level == 'DEBUG':
                     print("[{}] [DEBUG] In /r/{}, syncing flair for User: {}, old: {}, new: {}, other: {}"
-                        .format(
+                          .format(
                             datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                             source_sub,
                             user,
                             source_flair if source_flair != '' else '(none)',
                             merged_flair if merged_flair != '' else '(none)',
                             other_flair if other_flair != '' else '(none)'
-                        ))
+                          ))
 
                 row = {}
                 row['user'] = user
@@ -225,13 +225,13 @@ def main():
 
             if mode == 'continuous':
                 print('[{}] Pausing flair sync...'
-                    .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                 time.sleep(loop_time)
             else:
                 break
         except KeyboardInterrupt, SystemExit:
             print('[{}] Stopping flair sync...'
-                .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                  .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             break
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
