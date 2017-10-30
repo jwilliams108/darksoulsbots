@@ -29,6 +29,7 @@ class FlushOutput(object):
         self.terminal.write(message)
         self.terminal.flush()
 
+orig_stdout = sys.stdout
 sys.stdout = FlushOutput()
 
 
@@ -192,6 +193,15 @@ def main():
     if kill_list is not None:
         kill_list = kill_list.split(',')
 
+    try:
+        if cfg_file.getboolean('general', 'progress'):
+            progress = True
+            sys.stdout = orig_stdout
+        else:
+            progress = False
+    except ConfigParser.NoOptionError:
+        progress = False
+
     # main loop at set interval if mode is set to 'continuous'
     while True:
         print('[{}] Starting flair sync...'
@@ -202,7 +212,7 @@ def main():
             r = reddit_login(cfg_file, debug_level)
 
             # retrieve valid flairs from each sub
-            source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level)
+            source_flairs = reddit_get_all_flair(r, source_subs, valid_flairs, debug_level, progress)
 
             # build list of flairs to merge from source_subs
             merged_flairs = merge_flairs(source_subs, source_flairs, valid_flairs)
