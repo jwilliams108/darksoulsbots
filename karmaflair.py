@@ -5,9 +5,7 @@
 #
 # see karmaflair.ini to set options
 
-from praw import Reddit
-from praw import helpers
-from reddit import reddit_auth
+from reddit import reddit_login
 from reddit import reddit_reply_to_comment
 import ConfigParser
 from string import Template
@@ -23,6 +21,7 @@ import uuid
 debug_level = ''
 cfg_file = None
 r = None
+sr = None
 conn = None
 cur = None
 session_id = None
@@ -92,6 +91,9 @@ def handle_reply(comment, submission, name, granter, reply_type, reply_vars):
     if check_for_reply(submission, name, granter, reply_type):
         try:
             reddit_reply_to_comment(comment, get_reply_text(reply_type, reply_vars))
+            if debug_level == 'DEBUG':
+                print('[{}] [DEBUG] Message reply has been sent to {} by {}, for submission {} of type {}'
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, granter, submission.id, reply_type))
         except Exception as e:
             sys.stderr.write('[{}] [ERROR]: {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), e))
             sys.stderr.flush()
@@ -99,7 +101,10 @@ def handle_reply(comment, submission, name, granter, reply_type, reply_vars):
             set_replied(submission, name, granter, reply_type)
 
 
-def grant_karma(comment, submission, name, granter, reply_vars):
+def grant_karma(comment, parent, submission, reply_vars):
+    name = parent.author.name
+    granter = comment.author.name
+
     try:
         cur.execute("INSERT INTO " + cfg_file.get('karmaflair', 'dbtablename') + " (id, name, granter, type, session_id)" +
                     " VALUES (%s, %s, %s, 'successful_award', %s)",
@@ -134,10 +139,12 @@ def grant_karma(comment, submission, name, granter, reply_vars):
 
         # reply and update karma flair
         handle_reply(comment, submission, name, granter, 'successful_award', reply_vars)
-        set_karma_flair(name)
+        set_karma_flair(parent)
 
 
-def set_karma_flair(name):
+def set_karma_flair(comment):
+    name = comment.author.name
+
     try:
         # get their total karma from the db
         cur.execute("SELECT name, count(*) AS karma FROM karma WHERE name=%s AND type='successful_award' GROUP BY name", (name,))
@@ -145,11 +152,13 @@ def set_karma_flair(name):
 
         if result is not None and result[1]:
             # grab their existing flair info
-            subreddit = cfg_file.get('karmaflair', 'subreddit')
-            current_flair = r.get_flair(subreddit, name)
+            css_flair = comment.author_flair_css_class
             karma_flair_text = str(result[1]) + " Karma"
 
-            r.set_flair(subreddit, name, karma_flair_text, current_flair['flair_css_class'])
+            if debug_level == 'DEBUG':
+                print('[{}] [DEBUG] Setting flair text for {} to {}, with css class {}'
+                      .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, karma_flair_text, css_flair))
+            sr.flair.set(name, karma_flair_text, css_flair)
     except Exception as e:
         conn.rollback()
 
@@ -204,7 +213,7 @@ def process_comment_command(command, command_type, valid_commands, comment, subm
                 handle_reply(comment, submission, parent.author.name, comment.author.name, 'invalid_author', reply_vars)
                 break
 
-            grant_karma(comment, submission, parent.author.name, comment.author.name, reply_vars)
+            grant_karma(comment, parent, submission, reply_vars)
             break
 
 
@@ -212,6 +221,7 @@ def main():
     global cfg_file
     global debug_level
     global r
+    global sr
     global conn
     global cur
     global session_id
@@ -229,11 +239,11 @@ def main():
 
     debug_level = cfg_file.get('debug', 'level')
     mode = cfg_file.get('general', 'mode')
+    limit = cfg_file.getint('general', 'limit')
     loop_time = cfg_file.getint('general', 'loop_time')
     subreddit = cfg_file.get('karmaflair', 'subreddit')
     valid_commands = cfg_file.get('karmaflair', 'valid_commands')
 
-    # main loop at set interval if mode is set to 'continuous'
     while True:
         print('[{}] Starting karma flair...'
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
@@ -245,14 +255,23 @@ def main():
             cur = conn.cursor()
 
             # login
-            r = Reddit(user_agent=cfg_file.get('auth', 'user_agent'))
-            reddit_auth(r, cfg_file, debug_level)
+            r = reddit_login(cfg_file, debug_level)
+            sr = r.subreddit(subreddit)
 
             # generate session id
             session_id = uuid.uuid1()
 
-            # retrieve comments, stream will go back limit # of comments from start
-            for comment in helpers.comment_stream(r, subreddit, limit=100, verbosity=0):
+            # set comments, either fixed list going back limit # of comments from start or comment stream
+            if mode == 'single':
+                if debug_level == 'NOTICE' or debug_level == 'DEBUG':
+                    print('[{}] [NOTICE] Retrieving {} comments from /r/{}'
+                          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), limit, subreddit))
+                comments = sr.comments(limit=limit)
+            elif mode == 'continuous':
+                comments = sr.stream.comments()
+
+            # for comment in helpers.comment_stream(r, subreddit, limit=1000, verbosity=0):
+            for comment in comments:
                 if debug_level == 'DEBUG':
                     print('[{}] [DEBUG] Checking comment posted at {} by {}'
                           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.utcfromtimestamp(comment.created_utc), comment.author.name))
@@ -265,8 +284,12 @@ def main():
                     command = match.group(2)
                     command_type = match.group(1)
 
-                    submission = r.get_info(thing_id=comment.link_id)
-                    parent = r.get_info(thing_id=comment.parent_id)
+                    submission = comment.submission
+                    if not comment.is_root:
+                        parent = comment.parent()
+                        parent.refresh()
+                    else:
+                        parent = None
 
                     if debug_level == 'DEBUG':
                         print('[{}] [DEBUG] Processing comment command: {}{}'
@@ -286,7 +309,7 @@ def main():
             cur.close()
             conn.close()
 
-            print('[{}] Stopping summon karma...'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            print('[{}] Stopping karma flair...'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             break
         except Exception as e:
             cur.close()
