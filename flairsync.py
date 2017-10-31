@@ -189,7 +189,7 @@ def main():
     # optional config options
     try:
         ignore_list = cfg_file.get('flairsync', 'ignore_list')
-    except NoOptionError:
+    except ConfigParser.NoOptionError:
         ignore_list = None
 
     try:
