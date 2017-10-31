@@ -2,6 +2,7 @@
 mode          = single
 loop_time     = 180
 operation     = automatic
+progress      = 0
 
 [auth]
 user_agent    = FlairSync by /u/jwilliams108
