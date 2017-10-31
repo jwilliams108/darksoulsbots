@@ -154,4 +154,4 @@ def reddit_reply_to_comment(comment, text=None, distinguish=True):
         reply_comment = comment.reply(text)
 
         if distinguish:
-            reply_comment.distinguish()
+            reply_comment.mod.distinguish()
