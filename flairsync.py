@@ -102,7 +102,7 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
                           .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
                 else:
                     print('[{}] [NOTICE] There are no valid updated flair(s) to merge from /r/{}'
-                          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), both_count, source_sub))
+                          .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
     return merged_flairs
 
