@@ -148,7 +148,12 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_
                 else:
                     row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
 
-                row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"' if user in source_flairs[source_sub] else ''
+                if user in source_flairs[source_sub]:
+                    if source_flairs[source_sub][user]['flair_text']:
+                        row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"'
+                    else:
+                        row['flair_text'] = ''
+
                 response.append(row)
 
         # send response to reddit if there are flairs to sync
