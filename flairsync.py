@@ -123,7 +123,7 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_
 
         for user in keys_to_sync:
             # don't set flair for any user in the ignore list
-            if ignore_list is not None and user not in ignore_list:
+            if ignore_list is None or user not in ignore_list:
                 source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
                 other_flair = source_flairs[source_sub][user]['other_flair'] if user in source_flairs[source_sub] else ''
                 merged_flair = merged_flairs[user]
