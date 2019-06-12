@@ -46,21 +46,11 @@ def reddit_get_valid_flair(flair, valid_flairs):
 
 # get flairs other than those that match specified condition
 def reddit_get_additional_flair(flair, valid_flairs):
-    other_flair = ''
+    valid_flair = reddit_get_valid_flair(flair, valid_flairs)
+    all_flair = flair.split()
+    other_flair = [f for f in all_flair if f != valid_flair]
 
-    # check if other non-valid flair is present
-    split_flair = re.split(valid_flairs, flair)
-
-    if len(split_flair) == 1:
-        other_flair = split_flair[0].strip()
-    elif len(split_flair) == 2:
-        # handle if other flair comes before or after split flair
-        if split_flair[0].strip() == '':
-            other_flair = split_flair[1].strip()
-        else:
-            other_flair = split_flair[0].strip()
-
-    return other_flair
+    return '' if len(other_flair) == 0 else ' '.join(other_flair)
 
 
 # retrieve valid flairs from specified subs
