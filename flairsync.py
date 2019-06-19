@@ -67,13 +67,13 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
             both_count = 0
 
             for key in both_keys:
-                merged_flair = merged_flairs[key]
-                source_flair = source_flairs[source_sub][key]['valid_flair']
+                full_merged_flair = merged_flairs[key]
+                full_source_flair = source_flairs[source_sub][key]['valid_flair']
 
                 # only work with the valid flair substring - we know valid flairs are present
                 # but there still may be additional invalid/ignorable flair
-                merged_flair = reddit_get_valid_flair(merged_flair, valid_flairs)
-                source_flair = reddit_get_valid_flair(source_flair, valid_flairs)
+                merged_flair = reddit_get_valid_flair(full_merged_flair, valid_flairs)
+                source_flair = reddit_get_valid_flair(full_source_flair, valid_flairs)
 
                 if merged_flair != source_flair:
                     operation = cfg_file.get('general', 'operation')
@@ -94,7 +94,7 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
                         merged_flairs[key] = raw_input('Enter a custom flair: ')
                     elif sync_flair == 's':
                         both_count += 1
-                        merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
+                        merged_flairs[key] = full_source_flair
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
                 if len(both_keys) > 0:
@@ -122,10 +122,11 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_
         keys_to_sync = merge_only_keys | set(user for user in both_keys if source_flairs[source_sub][user]['valid_flair'] != merged_flairs[user])
 
         for user in keys_to_sync:
-            # don't set flair for any user in the ignore list
-            if ignore_list is None or user not in ignore_list:
+            # don't set flair for empty merged flair, or any user in the ignore list
+            if merged_flairs[user] != '' and (ignore_list is None or user not in ignore_list):
                 source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
                 other_flair = source_flairs[source_sub][user]['other_flair'] if user in source_flairs[source_sub] else ''
+                flair_text = source_flairs[source_sub][user]['flair_text'] if user in source_flairs[source_sub] else ''
                 merged_flair = merged_flairs[user]
 
                 if debug_level == 'DEBUG':
@@ -148,9 +149,7 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_
                 else:
                     row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
 
-                row['flair_text'] = ''
-                if user in source_flairs[source_sub] and source_flairs[source_sub][user]['flair_text']:
-                    row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"'
+                row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"' if flair_text != '' else ''
 
                 response.append(row)
 
