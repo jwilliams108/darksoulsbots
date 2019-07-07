@@ -8,9 +8,11 @@
 from reddit import reddit_login
 from reddit import reddit_get_all_flair
 from reddit import reddit_get_valid_flair
+from reddit import reddit_get_additional_flair
 from reddit import reddit_set_flair
 import ConfigParser
 import sys
+import re
 import time
 from datetime import datetime
 
@@ -51,11 +53,11 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
                 merged_flairs[key] = source_flairs[source_sub][key]['valid_flair']
 
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                print('[{}] [NOTICE] {} new valid flair(s) merged from /r/{}'
+                print('[{}] [NOTICE] {} new flair(s) merged from /r/{}'
                       .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), len(source_only_keys), source_sub))
         else:
             if debug_level == 'NOTICE' or debug_level == 'DEBUG':
-                print('[{}] [NOTICE] There are no valid new flairs to merge from /r/{} '
+                print('[{}] [NOTICE] There are no new flairs to merge from /r/{} '
                       .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
 
         # update flair present in both current source_sub and merged_flairs
@@ -108,7 +110,7 @@ def merge_flairs(source_subs, source_flairs, valid_flairs):
 
 
 # sync merged_flairs to source_subs
-def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_list=None, kill_list=None):
+def sync_flairs(source_subs, new_subs, source_flairs, merged_flairs, valid_flairs, component_flairs, valid_new_flairs, new_flair_map, ignore_list=None, kill_list=None):
     for source_sub in source_subs:
         print('[{}] Checking for flairs to sync to /r/{}...'
               .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), source_sub))
@@ -127,6 +129,7 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_
                 source_flair = source_flairs[source_sub][user]['valid_flair'] if user in source_flairs[source_sub] else ''
                 other_flair = source_flairs[source_sub][user]['other_flair'] if user in source_flairs[source_sub] else ''
                 flair_text = source_flairs[source_sub][user]['flair_text'] if user in source_flairs[source_sub] else ''
+                other_flair_text = reddit_get_additional_flair(flair_text, valid_new_flairs)
                 merged_flair = merged_flairs[user]
 
                 if debug_level == 'DEBUG':
@@ -149,7 +152,23 @@ def sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, ignore_
                 else:
                     row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
 
-                row['flair_text'] = '\"' + source_flairs[source_sub][user]['flair_text'] + '\"' if flair_text != '' else ''
+                new_flair_text = ''
+                if source_sub in new_subs:
+                    # add new reddit version of valid flair if available
+                    match = re.search(component_flairs, merged_flair)
+                    if match:
+                        new_flair = []
+                        for m in match.groups():
+                            if m is not None:
+                                m_flair = m.replace('T', '').lower()
+                                if m_flair in new_flair_map:
+                                    new_flair.append(':' + new_flair_map[m_flair] + ':')
+
+                        new_flair_text = ''.join(new_flair) if len(new_flair) else ''
+
+                if other_flair_text != '' or new_flair_text != '':
+                    flair_text = [t for t in [other_flair_text, new_flair_text] if t != '']
+                    row['flair_text'] = ' '.join(flair_text)
 
                 response.append(row)
 
@@ -187,6 +206,7 @@ def main():
     loop_time = cfg_file.getint('general', 'loop_time')
     source_subs = (cfg_file.get('flairsync', 'subreddits')).split(',')
     valid_flairs = cfg_file.get('flairsync', 'valid_flairs')
+    component_flairs = cfg_file.get('flairsync', 'component_flairs')
 
     # optional config options
     try:
@@ -204,6 +224,23 @@ def main():
 
     if kill_list is not None:
         kill_list = kill_list.split(',')
+
+    try:
+        new_subs = cfg_file.get('flairsync', 'new_subreddits')
+        new_subs = new_subs.split(',')
+    except ConfigParser.NoOptionError:
+        new_subs = None
+
+    try:
+        valid_new_flairs = cfg_file.get('flairsync', 'valid_new_flairs')
+    except ConfigParser.NoOptionError:
+        valid_new_flairs = 'a^' # match nothing
+
+    try:
+        new_flair_map = cfg_file.items('newreddit_map')
+        new_flair_map = dict(new_flair_map)
+    except ConfigParser.NoOptionError:
+        new_flair_map = {}
 
     try:
         if cfg_file.getboolean('general', 'progress'):
@@ -230,7 +267,7 @@ def main():
             merged_flairs = merge_flairs(source_subs, source_flairs, valid_flairs)
 
             # sync merged flairs
-            sync_flairs(source_subs, source_flairs, merged_flairs, valid_flairs, kill_list)
+            sync_flairs(source_subs, new_subs, source_flairs, merged_flairs, valid_flairs, component_flairs, valid_new_flairs, new_flair_map, ignore_list, kill_list)
 
             if mode == 'continuous':
                 print('[{}] Pausing flair sync...'
