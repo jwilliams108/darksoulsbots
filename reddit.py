@@ -79,18 +79,20 @@ def reddit_get_all_flair(r, sub_names, valid_flairs, debug_level='NOTICE', progr
                 valid_flair = ''
                 other_flair = ''
 
-            sub_flairs[flair['user']] = {}
-            sub_flairs[flair['user']]['valid_flair'] = valid_flair
-            sub_flairs[flair['user']]['other_flair'] = other_flair
+            key = flair['user'].name
+            sub_flairs[key] = {}
+            sub_flairs[key]['valid_flair'] = valid_flair
+            sub_flairs[key]['other_flair'] = other_flair
 
             if flair['flair_text'] is not None and flair['flair_text'] != '':
-                sub_flairs[flair['user']]['flair_text'] = flair['flair_text'].encode('utf-8')
+                sub_flairs[key]['flair_text'] = flair['flair_text'].encode('utf-8')
             else:
-                sub_flairs[flair['user']]['flair_text'] = ''
+                sub_flairs[key]['flair_text'] = ''
 
             if debug_level == 'DEBUG':
                 print('[{}] [DEBUG] Retrieving from /r/{} ({}) User: {} has flair class: {} and flair text: \'{}\''
-                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'], flair['flair_css_class'], sub_flairs[flair['user']]['flair_text']))
+                        .format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sub_name, index, flair['user'],
+                            flair['flair_css_class'], sub_flairs[flair[key]]['flair_text']))
 
         if progress is True and (debug_level == 'NOTICE' or debug_level == 'DEBUG'):
             sys.stdout.write('\n')
