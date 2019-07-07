@@ -153,7 +153,7 @@ def sync_flairs(source_subs, new_subs, source_flairs, merged_flairs, valid_flair
                     row['flair_css_class'] = ' '.join([other_flair, merged_flair]) if other_flair != '' else merged_flair
 
                 new_flair_text = ''
-                if source_sub in new_subs:
+                if source_sub in new_subs and component_flairs is not None:
                     # add new reddit version of valid flair if available
                     match = re.search(component_flairs, merged_flair)
                     if match:
@@ -206,7 +206,6 @@ def main():
     loop_time = cfg_file.getint('general', 'loop_time')
     source_subs = (cfg_file.get('flairsync', 'subreddits')).split(',')
     valid_flairs = cfg_file.get('flairsync', 'valid_flairs')
-    component_flairs = cfg_file.get('flairsync', 'component_flairs')
 
     # optional config options
     try:
@@ -237,6 +236,11 @@ def main():
         new_flair_map = dict(new_flair_map)
     except ConfigParser.NoOptionError:
         new_flair_map = {}
+
+    try:
+        component_flairs = cfg_file.get('flairsync', 'component_flairs')
+    except ConfigParser.NoOptionError:
+        component_flairs = None
 
     try:
         if cfg_file.getboolean('general', 'progress'):
