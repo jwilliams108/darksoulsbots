@@ -211,19 +211,15 @@ def main():
     # optional config options
     try:
         ignore_list = cfg_file.get('flairsync', 'ignore_list')
+        ignore_list = ignore_list.split(',')
     except ConfigParser.NoOptionError:
         ignore_list = None
 
     try:
         kill_list = cfg_file.get('flairsync', 'kill_list')
+        kill_list = kill_list.split(',')
     except ConfigParser.NoOptionError:
         kill_list = None
-
-    if ignore_list is not None:
-        ignore_list = ignore_list.split(',')
-
-    if kill_list is not None:
-        kill_list = kill_list.split(',')
 
     try:
         new_subs = cfg_file.get('flairsync', 'new_subreddits')
