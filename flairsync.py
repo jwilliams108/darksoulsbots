@@ -169,6 +169,8 @@ def sync_flairs(source_subs, new_subs, source_flairs, merged_flairs, valid_flair
                 if other_flair_text != '' or new_flair_text != '':
                     flair_text = [t for t in [other_flair_text, new_flair_text] if t != '']
                     row['flair_text'] = ' '.join(flair_text)
+                else:
+                    row['flair_text'] = ''
 
                 response.append(row)
 
